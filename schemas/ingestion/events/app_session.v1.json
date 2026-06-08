@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mindpeers.io/schemas/ingestion/events/app_session.v1.json",
+  "title": "app_session payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["session_duration_sec", "platform"],
+  "properties": {
+    "session_duration_sec": { "type": "integer", "minimum": 0, "maximum": 86400 },
+    "screens_viewed": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 64 },
+      "maxItems": 50
+    },
+    "tasks_completed": { "type": "integer", "minimum": 0, "default": 0 },
+    "platform": { "type": "string", "enum": ["ios", "android", "web"] },
+    "app_version": { "type": "string", "maxLength": 32 }
+  }
+}

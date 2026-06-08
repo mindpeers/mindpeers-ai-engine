@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mindpeers.io/schemas/ingestion/events/sleep_session.v1.json",
+  "title": "sleep_session payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sleep_start",
+    "sleep_end",
+    "duration_hours",
+    "vendor_session_id"
+  ],
+  "properties": {
+    "sleep_start": { "type": "string", "format": "date-time" },
+    "sleep_end": { "type": "string", "format": "date-time" },
+    "duration_hours": { "type": "number", "exclusiveMinimum": 0, "maximum": 16 },
+    "efficiency": { "type": "number", "minimum": 0, "maximum": 1 },
+    "awakenings": { "type": "integer", "minimum": 0 },
+    "deep_sleep_min": { "type": "integer", "minimum": 0 },
+    "rem_sleep_min": { "type": "integer", "minimum": 0 },
+    "bedtime_local": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+    "wake_time_local": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+    "vendor_session_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+  }
+}

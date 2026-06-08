@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mindpeers.io/schemas/ingestion/common/envelope.v1.json",
+  "title": "MindPeers Ingestion Event Envelope",
+  "description": "Common wrapper for all L0 raw events. See Data-Ingestion-Layer-Production-Spec.md §6.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "source_system",
+    "connector_version",
+    "user_id",
+    "occurred_at",
+    "occurred_at_utc",
+    "local_date",
+    "timezone",
+    "idempotency_key",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique event identifier (UUID v4)."
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "event_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "source_system": {
+      "type": "string",
+      "enum": [
+        "app_mobile",
+        "app_web",
+        "wearable_apple",
+        "wearable_google",
+        "wearable_vendor",
+        "therapy_platform",
+        "assessments",
+        "auth_crm",
+        "content_engagement",
+        "nlp_worker",
+        "cogniart"
+      ]
+    },
+    "connector_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "user_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "organization_id": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 with timezone offset (user-local context)."
+    },
+    "occurred_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Normalized UTC timestamp."
+    },
+    "local_date": {
+      "type": "string",
+      "format": "date",
+      "description": "User calendar date (YYYY-MM-DD) for daily aggregation."
+    },
+    "timezone": {
+      "type": "string",
+      "minLength": 1,
+      "description": "IANA timezone, e.g. Asia/Kolkata."
+    },
+    "ingested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Set by ingestion service on accept."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 256,
+      "description": "Stable key: {user_id}:{event_type}:{business_key}"
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

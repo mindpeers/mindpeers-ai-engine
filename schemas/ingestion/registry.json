@@ -1,0 +1,52 @@
+{
+  "registry_version": "1.0.0",
+  "last_updated": "2026-06-05",
+  "description": "Maps event_type to payload JSON Schema. Envelope: common/envelope.v1.json",
+  "events": {
+    "mood_checkin": {
+      "payload_schema": "events/mood_checkin.v1.json",
+      "source_systems": ["app_mobile", "app_web"],
+      "idempotency_template": "{user_id}:mood_checkin:{occurred_at}"
+    },
+    "motivation_checkin": {
+      "payload_schema": "events/motivation_checkin.v1.json",
+      "source_systems": ["app_mobile", "app_web"],
+      "idempotency_template": "{user_id}:motivation_checkin:{occurred_at}"
+    },
+    "confidence_checkin": {
+      "payload_schema": "events/confidence_checkin.v1.json",
+      "source_systems": ["app_mobile", "app_web"],
+      "idempotency_template": "{user_id}:confidence_checkin:{occurred_at}"
+    },
+    "app_session": {
+      "payload_schema": "events/app_session.v1.json",
+      "source_systems": ["app_mobile", "app_web"],
+      "idempotency_template": "{user_id}:app_session:{event_id}"
+    },
+    "sleep_session": {
+      "payload_schema": "events/sleep_session.v1.json",
+      "source_systems": ["wearable_apple", "wearable_google", "wearable_vendor"],
+      "idempotency_template": "{user_id}:sleep_session:{payload.vendor_session_id}"
+    },
+    "heart_rate_daily": {
+      "payload_schema": "events/heart_rate_daily.v1.json",
+      "source_systems": ["wearable_apple", "wearable_google", "wearable_vendor"],
+      "idempotency_template": "{user_id}:heart_rate_daily:{local_date}"
+    },
+    "session_attended": {
+      "payload_schema": "events/session_attended.v1.json",
+      "source_systems": ["therapy_platform"],
+      "idempotency_template": "{user_id}:session_attended:{payload.session_id}"
+    },
+    "assessment_completed": {
+      "payload_schema": "events/assessment_completed.v1.json",
+      "source_systems": ["assessments"],
+      "idempotency_template": "{user_id}:assessment_completed:{payload.assessment_id}"
+    },
+    "user_registered": {
+      "payload_schema": "events/user_registered.v1.json",
+      "source_systems": ["auth_crm"],
+      "idempotency_template": "{user_id}:user_registered:v1"
+    }
+  }
+}

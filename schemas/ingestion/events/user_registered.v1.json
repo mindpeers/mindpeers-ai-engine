@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mindpeers.io/schemas/ingestion/events/user_registered.v1.json",
+  "title": "user_registered payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["organization_id", "registration_channel", "system_type", "timezone"],
+  "properties": {
+    "organization_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "registration_channel": {
+      "type": "string",
+      "enum": ["ios_app", "android_app", "web", "therapist_invite"]
+    },
+    "has_wearable_connected": { "type": "boolean", "default": false },
+    "system_type": { "type": "integer", "enum": [0, 1] },
+    "timezone": { "type": "string", "minLength": 1 },
+    "age_band": { "type": "string", "maxLength": 16 },
+    "program_id": { "type": "string", "maxLength": 64 }
+  }
+}

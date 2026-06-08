@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mindpeers.io/schemas/ingestion/events/session_attended.v1.json",
+  "title": "session_attended payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["session_id", "modality"],
+  "properties": {
+    "session_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "therapist_id": { "type": "string", "maxLength": 64 },
+    "scheduled_duration_min": { "type": "integer", "minimum": 0, "maximum": 240 },
+    "actual_duration_min": { "type": "integer", "minimum": 0, "maximum": 240 },
+    "modality": { "type": "string", "enum": ["video", "audio", "in_person", "chat"] },
+    "homework_assigned": { "type": "boolean" },
+    "homework_completed": { "type": "boolean" }
+  }
+}

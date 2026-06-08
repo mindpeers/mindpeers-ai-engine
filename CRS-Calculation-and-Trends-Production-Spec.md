@@ -1,8 +1,9 @@
 # Cognitive Readiness Score (CRS) & Trend Metrics — Production Specification
 
-**Version:** 1.0.0  
-**Status:** Production-ready specification  
+**Version:** 2.0.0  
+**Status:** Production-ready specification (clinical labels v2)  
 **Source artifacts:** `CRS Calculation with trends.docx`, `CRS Calculation.docx`, `ENGINE-POC-COMPLETE-DOCUMENTATION.md`  
+**Related layers:** [L2-Feature-Store-Production-Spec.md](./L2-Feature-Store-Production-Spec.md), [Data-Ingestion-Layer-Production-Spec.md](./Data-Ingestion-Layer-Production-Spec.md)  
 **Audience:** Engineering, ML, Product, Clinical  
 **Last updated:** 2026-06-05
 
@@ -41,10 +42,10 @@ CRS is **not** a direct ML target. There is no ground-truth `crs_label` in histo
 
 | Outcome | Label question | Label type |
 |---------|----------------|------------|
-| **Recovery** | Did CORE-OM improve by more than threshold X? | Binary (0/1) |
-| **Relapse** | Did CORE-OM worsen by more than threshold X? | Binary (0/1) |
-| **Dropout** | Did the user leave therapy? | Binary (0/1) |
-| **Engagement loss** | Did engagement drop more than 50%? | Binary (0/1) |
+| **Recovery** | Clinically meaningful improvement on CORE-OM (subscales + total) with GAD-7 confirmers — see [§4.3](#43-clinical-outcome-labels-production-specification) | Binary (0/1) / censored |
+| **Relapse** | Meaningful CORE-OM worsening, risk elevation, or GAD-7 worsening — see [§4.3](#43-clinical-outcome-labels-production-specification) | Binary (0/1) / censored |
+| **Dropout** | Did the user leave therapy or become inactive? | Binary (0/1) |
+| **Engagement loss** | Did engagement drop more than 50% vs baseline? | Binary (0/1) |
 
 These labels are **natural, auditable business events** — not synthetic constructs — and make stronger ML targets than an arbitrarily defined readiness score.
 
@@ -153,22 +154,24 @@ CRS becomes **interpretable**: every point on the score maps to a weighted contr
 | Synthetic CRS label | Rule-based formula applied retroactively | Easy to generate | Circular; model learns the formula, not outcomes |
 | **Real outcome labels** | Dropout events, CORE-OM deltas, engagement drops | Grounded in business/clinical reality; auditable | Requires label engineering and threshold tuning |
 
-**Example — label definition for Recovery:**
+**Example — label definition for Recovery (see §4.3 for full rules):**
+
+Recovery and relapse labels use **CORE-OM subscales + total**, GAD-7 confirmers, assessment windows (T+21 to T+45 days), censoring when no follow-up, and relapse-before-recovery precedence. CORE-OM total alone is not sufficient.
 
 ```
-recovery_label = 1  IF  (core_om_score_at_T+30d - core_om_score_at_T) < -X
-recovery_label = 0  OTHERWISE
-
-Where X = clinically agreed minimum meaningful change (e.g., 5 points on CORE-OM)
+recovery_label = 1  IF  any subscale/total MCID met (R1–R4)
+                    AND risk guard passes
+                    AND relapse_criteria NOT met
+recovery_label = null  IF  no valid follow-up in assessment window
 ```
 
 **Example — label rows in training data:**
 
-| user_id | snapshot_date | core_om_score | recovery_label | Notes |
+| user_id | snapshot_date | core_om_total | recovery_label | Notes |
 |---------|---------------|---------------|----------------|-------|
-| 1001 | 2024-10-01 | 22 | 1 | CORE-OM dropped to 16 by Nov 1 (−6) |
-| 1002 | 2024-10-01 | 18 | 0 | CORE-OM stable at 17 by Nov 1 |
-| 1003 | 2024-10-01 | 25 | 0 | User dropped out before 30d window → exclude or censor |
+| 1001 | 2024-10-01 | 22 | 1 | Total −6 and problems subscale improved (§4.3.5) |
+| 1002 | 2024-10-01 | 18 | 0 | Stable in window — neither recovery nor relapse |
+| 1003 | 2024-10-01 | 25 | null | No follow-up in [T+21, T+45] → censored, exclude from training |
 
 ### 2.3 Determinism rule
 
@@ -290,39 +293,300 @@ Every user-day produces one row in the feature store with **features + labels** 
 | **Psychological** | `mood_avg_14d`, `mood_volatility_14d`, `gad7_score`, `core_om_score` | Emotional Balance pillar, Emotional Stability |
 | **Cognitive** | `core_om_functioning`, journal coherence, CogniArt features (future) | Clarity pillar, Cognitive Momentum |
 
-### 4.3 Label definitions (production)
+### 4.3 Clinical outcome labels — production specification
 
-| Label | Field | Definition | Prediction horizon | Example threshold |
-|-------|-------|------------|-------------------|-------------------|
-| `recovery_label` | Binary | CORE-OM improved by > X points | 30 days | X = 5 (clinical sign-off required) |
-| `relapse_label` | Binary | CORE-OM worsened by > X points | 30 days | X = 5 |
-| `dropout_label` | Binary | User terminated therapy / no activity for Y days | 60 days | Y = 30 |
-| `engagement_loss_label` | Binary | `engagement_rate` dropped > 50% vs 30d baseline | 14 days | 50% relative drop |
+CORE-OM is the **primary clinical anchor** for recovery and relapse labels but is **not sufficient alone**. This section defines production-grade labels aligned with ENGINE-POC G7 (CORE-OM subscales) and D3 (GAD-7 in v1). For a one-page clinical review summary, see [Appendix B.1](#appendix-b1--clinical-label-decision-tree-for-sign-off).
 
-**Example — computing recovery_label:**
+#### 4.3.1 Design principles
 
-```python
-# Pseudocode — label generation (offline, training pipeline only)
-def compute_recovery_label(user_id, snapshot_date, horizon_days=30, threshold=5):
-    score_now = get_core_om(user_id, snapshot_date)
-    score_future = get_core_om(user_id, snapshot_date + horizon_days)
+| Principle | Requirement |
+|-----------|-------------|
+| **Clinical ground truth** | Labels derived from assessments and program events, not CRS itself |
+| **Subscale-aware** | Use `core_om_wellbeing`, `core_om_problems`, `core_om_functioning`, `core_om_risk` — not total score only |
+| **Sparse-safe** | No follow-up assessment → `label = null` (censored), never default to 0 |
+| **Mutually exclusive** | Relapse evaluated before recovery; at most one positive clinical label per snapshot |
+| **Point-in-time** | Label at T uses only assessments with `occurred_at ≤ T + horizon` |
+| **Auditable** | Store `label_version`, thresholds, and assessment IDs used |
 
-    if score_future is None:
-        return None  # censored — exclude from training
+#### 4.3.2 Why CORE-OM alone is insufficient
 
-    delta = score_future - score_now
-    # Lower CORE-OM = better (distress reduction)
-    return 1 if delta <= -threshold else 0
+| Gap | Risk if ignored | Mitigation in this spec |
+|-----|-----------------|-------------------------|
+| Infrequent reassessment | Most users lack T+30 CORE-OM → biased training | Assessment window + censoring |
+| Total score masks mixed change | Problems improve, functioning worsens → false neutral | Subscale rules |
+| Anxiety-specific recovery | GAD-7 improves, CORE-OM unchanged | GAD-7 confirmer for recovery |
+| Relapse ≠ only score increase | Risk subscale may elevate first | `core_om_risk` in relapse rule |
+| Behavioral recovery lag | Mood/sleep improve before next CORE-OM | Secondary confirmer (optional v1.1) |
+
+#### 4.3.3 Configuration constants (clinical sign-off required)
+
+| Constant | Default | Owner | Description |
+|----------|---------|-------|-------------|
+| `CORE_OM_MCID_TOTAL` | 5 | Clinical | Min meaningful change on total score (raw points) |
+| `CORE_OM_MCID_SUBSCALE_NORM` | 0.10 | Clinical | Min change on normalized subscale (0–1) |
+| `GAD7_MCID` | 4 | Clinical | Min change on GAD-7 raw score |
+| `CORE_OM_RISK_RELAPSE_THRESHOLD` | 0.70 | Clinical | Normalized risk ≥ this → relapse signal |
+| `ASSESSMENT_HORIZON_DAYS` | 30 | Product | Target follow-up period |
+| `ASSESSMENT_WINDOW_MIN_DAYS` | 21 | Product | Earliest valid follow-up |
+| `ASSESSMENT_WINDOW_MAX_DAYS` | 45 | Product | Latest valid follow-up |
+| `DROPOUT_HORIZON_DAYS` | 60 | Product | Dropout observation window |
+| `DROPOUT_INACTIVE_DAYS` | 30 | Product | No app activity threshold |
+| `ENGAGEMENT_LOSS_RELATIVE_DROP` | 0.50 | Product | 50% drop vs 30d baseline |
+| `LABEL_VERSION` | `label_v2.0.0` | Engineering | Bump on rule change |
+
+**Note:** Lower CORE-OM total = lower distress = improvement.
+
+#### 4.3.4 Assessment pairing logic
+
+Follow-up assessment must fall in **[T + 21d, T + 45d]** (configurable window around 30d horizon).
+
+**Pseudocode — assessment pairing:**
+
+```
+FUNCTION get_followup_assessment(user_id, snapshot_date, instrument, window):
+  candidates = assessments(user_id, instrument)
+    WHERE occurred_at BETWEEN snapshot_date + window.min
+                          AND snapshot_date + window.max
+  RETURN candidate with MIN(abs(occurred_at - (snapshot_date + 30 days)))
+         OR NULL if no candidates  → censored
 ```
 
-**Example — label distribution in a training cohort:**
+**Censoring examples:**
 
-| Label | Positive rate | Typical class balance |
-|-------|--------------|----------------------|
-| recovery_label | ~35% | Moderate imbalance — use class weights |
-| relapse_label | ~12% | Imbalanced — stratified sampling |
-| dropout_label | ~18% | Moderate |
-| engagement_loss_label | ~22% | Moderate |
+| Case | recovery_label | relapse_label | Training action |
+|------|----------------|---------------|-----------------|
+| CORE-OM at T and T+30 in window | 0 or 1 | 0 or 1 | Include row |
+| CORE-OM at T only, no follow-up | `null` | `null` | **Exclude** from clinical model training |
+| User dropped out before window | `null` | `null` | Exclude; use dropout_label separately |
+| Only GAD-7 follow-up, no CORE-OM | GAD-7 confirmer path (§4.3.6) | Partial | Flag `label_confidence=secondary` |
+
+#### 4.3.5 Recovery label (`recovery_label`)
+
+**Primary criteria (any ONE required + safety guard):**
+
+| # | Criterion | Formula |
+|---|-----------|---------|
+| R1 | Total CORE-OM improvement | `(total_T+30 - total_T) ≤ -CORE_OM_MCID_TOTAL` |
+| R2 | Problems subscale improvement | `(problems_T+30 - problems_T) ≤ -CORE_OM_MCID_SUBSCALE_NORM` |
+| R3 | Wellbeing subscale improvement | `(wellbeing_T+30 - wellbeing_T) ≥ +CORE_OM_MCID_SUBSCALE_NORM` |
+| R4 | Functioning subscale improvement | `(functioning_T+30 - functioning_T) ≥ +CORE_OM_MCID_SUBSCALE_NORM` |
+
+**Safety guard (all recovery paths):**
+
+```
+core_om_risk_T+30 < CORE_OM_RISK_RELAPSE_THRESHOLD
+AND NOT relapse_criteria_met (§4.3.6)
+```
+
+**GAD-7 confirmer (when CORE-OM follow-up missing but GAD-7 exists in window):**
+
+```
+recovery_label = 1 IF (gad7_T+30 - gad7_T) <= -GAD7_MCID
+                 AND mood_slope_7d at T+30 > 0
+                 AND label_confidence = "secondary"
+```
+
+**Worked example — recovery via problems subscale:**
+
+```
+Snapshot T (Jan 1):
+  core_om_total=22, problems_norm=0.55, wellbeing_norm=0.45, functioning_norm=0.50, risk_norm=0.20
+Snapshot T+30 (Jan 31):
+  core_om_total=17, problems_norm=0.38, wellbeing_norm=0.52, functioning_norm=0.55, risk_norm=0.15
+
+Delta total = -5  → meets R1 (MCID=5)
+Risk at T+30 = 0.15 < 0.70  → guard pass
+→ recovery_label = 1
+```
+
+**Worked example — censored:**
+
+```
+CORE-OM at T = 20
+No CORE-OM or GAD-7 in [T+21, T+45]
+→ recovery_label = null, relapse_label = null (exclude from training)
+```
+
+#### 4.3.6 Relapse label (`relapse_label`)
+
+**Evaluated before recovery.** If any criterion true → `relapse_label=1`, `recovery_label=0`.
+
+| # | Criterion | Formula |
+|---|-----------|---------|
+| L1 | Total CORE-OM worsening | `(total_T+30 - total_T) ≥ +CORE_OM_MCID_TOTAL` |
+| L2 | Problems subscale worsening | `(problems_T+30 - problems_T) ≥ +CORE_OM_MCID_SUBSCALE_NORM` |
+| L3 | Risk elevation | `core_om_risk_T+30 ≥ CORE_OM_RISK_RELAPSE_THRESHOLD` |
+| L4 | Risk increase | `(risk_T+30 - risk_T) ≥ +0.15` |
+| L5 | GAD-7 worsening (confirmer) | `(gad7_T+30 - gad7_T) ≥ +GAD7_MCID` when CORE-OM absent |
+
+**Worked example — relapse via risk elevation:**
+
+```
+T:   total=18, risk_norm=0.25
+T+30: total=19, risk_norm=0.72
+
+Total delta = +1 (below MCID) but risk_T+30 ≥ 0.70
+→ relapse_label = 1, recovery_label = 0
+```
+
+**Worked example — mixed trajectory (subscale importance):**
+
+```
+T → T+30:
+  problems: 0.60 → 0.42  (improved)
+  functioning: 0.55 → 0.40  (worsened)
+  total: unchanged
+
+→ relapse=0, recovery=0 (stable), NOT censored
+```
+
+#### 4.3.7 Dropout label (`dropout_label`)
+
+**Independent of clinical labels.** Program/business outcome.
+
+```
+dropout_label = 1 IF ANY of:
+  - user_churned event within [T, T + DROPOUT_HORIZON_DAYS]
+  - no app_session AND no therapy_attended for DROPOUT_INACTIVE_DAYS consecutive days
+  - therapy program status = 'terminated'
+ELSE 0
+```
+
+#### 4.3.8 Engagement loss label (`engagement_loss_label`)
+
+```
+baseline = engagement_rate_7d at T
+future   = engagement_rate_7d at T + 14d
+
+engagement_loss_label = 1 IF future <= baseline * (1 - ENGAGEMENT_LOSS_RELATIVE_DROP)
+ELSE 0
+```
+
+#### 4.3.9 Label precedence and storage
+
+**Evaluation order at snapshot T:**
+
+```
+1. If no valid clinical follow-up in window → recovery=null, relapse=null
+2. Else if relapse_criteria → relapse=1, recovery=0
+3. Else if recovery_criteria → recovery=1, relapse=0
+4. Else → recovery=0, relapse=0
+5. Compute dropout_label and engagement_loss_label independently
+```
+
+**Training table:** `ml.training_labels` — columns: `user_id`, `snapshot_date`, `recovery_label`, `relapse_label`, `dropout_label`, `engagement_loss_label`, `label_version`, `label_confidence`, `label_censored_reason`.
+
+**Inference:** Labels are **never** on production feature rows — only model probabilities.
+
+#### 4.3.10 Label generation service specification
+
+Labels are produced **offline** by a batch job (`ml.label_generation_daily`) — not at inference time. This section is the canonical specification; engineering implements against these contracts.
+
+**Job inputs**
+
+| Input | Source | Required |
+|-------|--------|----------|
+| Snapshot rows | `ml.snapshots` at `(user_id, snapshot_date)` | Yes |
+| CORE-OM assessments | `raw.assessment_completed` (instrument = CORE-OM) | For primary path |
+| GAD-7 assessments | `raw.assessment_completed` (instrument = GAD-7) | For confirmer path |
+| Engagement series | L2 `engagement_rate_7d` | For engagement_loss_label |
+| Program events | churn, therapy termination, inactivity rollup | For dropout_label |
+| Config | `LabelConfig` (§4.3.3 constants) | Yes |
+
+**Job output — table `ml.training_labels`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `user_id` | string | User identifier |
+| `snapshot_date` | date | Label anchor date T |
+| `recovery_label` | int \| null | 0, 1, or null (censored) |
+| `relapse_label` | int \| null | 0, 1, or null (censored) |
+| `dropout_label` | int | 0 or 1 |
+| `engagement_loss_label` | int | 0 or 1 |
+| `label_version` | string | e.g. `label_v2.0.0` |
+| `label_confidence` | enum | `primary` \| `secondary` \| null |
+| `label_censored_reason` | enum \| null | `no_followup_in_window`, `dropout_before_window` |
+| `recovery_criteria_met` | string[] | R1–R4 IDs when applicable |
+| `relapse_criteria_met` | string[] | L1–L5 IDs when applicable |
+| `baseline_assessment_id` | string \| null | CORE-OM at T |
+| `followup_assessment_id` | string \| null | CORE-OM in window |
+| `computed_at` | timestamp | Audit |
+
+**Pseudocode — clinical labels (recovery + relapse):**
+
+```
+FUNCTION compute_clinical_labels(user_id, snapshot_date, config):
+  baseline = nearest CORE-OM on or before snapshot_date
+  IF user_churned before assessment window:
+    RETURN recovery=null, relapse=null, censored=dropout_before_window
+
+  followup = get_followup_assessment(user_id, snapshot_date, CORE-OM, config.window)
+
+  IF followup IS NULL:
+    IF gad7_confirmer_path_satisfied(user_id, snapshot_date, config):
+      RETURN recovery=1, relapse=0, confidence=secondary
+    RETURN recovery=null, relapse=null, censored=no_followup_in_window
+
+  relapse_met = evaluate L1–L5(baseline, followup, config)
+  IF relapse_met NOT EMPTY:
+    RETURN relapse=1, recovery=0, confidence=primary
+
+  recovery_met = evaluate R1–R4(baseline, followup, config)
+  IF recovery_met NOT EMPTY AND followup.risk < config.risk_threshold:
+    RETURN recovery=1, relapse=0, confidence=primary
+
+  RETURN recovery=0, relapse=0, confidence=primary
+```
+
+**Pseudocode — dropout and engagement (independent):**
+
+```
+dropout_label = 1 IF churn OR therapy_terminated OR inactive >= DROPOUT_INACTIVE_DAYS
+                ELSE 0
+
+engagement_loss_label = 1 IF engagement_rate_7d(T+14) <= engagement_rate_7d(T) × 0.50
+                        ELSE 0
+```
+
+**Operational requirements**
+
+| Requirement | Rule |
+|-------------|------|
+| Determinism | Same inputs + `label_version` → identical labels |
+| Idempotency | Upsert on `(user_id, snapshot_date, label_version)` |
+| Schedule | Daily after L2 feature job (02:15 UTC); only snapshots with `snapshot_date ≤ today − 45d` for clinical labels |
+| Exclusion | Rows with `recovery_label IS NULL` excluded from recovery/relapse model training |
+| Lineage | Store assessment IDs used; retain for model audit |
+| Version bump | Any threshold or rule change → new `label_version`; re-backfill optional |
+
+**Acceptance criteria**
+
+- [ ] Worked examples in §4.3.5–§4.3.6 produce expected labels when run through job  
+- [ ] Censoring rate reported monthly; alert if > 40%  
+- [ ] Relapse always evaluated before recovery  
+- [ ] No label columns exposed on production inference API  
+
+#### 4.3.11 ML training rules
+
+| Label | Expected positive rate | Handling |
+|-------|------------------------|----------|
+| recovery_label | 25–40% (non-censored) | Class weights |
+| relapse_label | 8–15% (non-censored) | Monitor AUC-PR |
+| dropout_label | 15–20% | Standard |
+| engagement_loss_label | 20–25% | Standard |
+
+**Censoring target:** < 40% for clinical models at 30d+ maturity. Report monthly.
+
+#### 4.3.12 Clinical governance checklist
+
+- [ ] MCID thresholds signed by clinical lead  
+- [ ] Risk threshold aligned with escalation policy  
+- [ ] Censoring rate monitored; reassessment cadence defined  
+- [ ] Labels not presented as diagnosis to end users  
+- [ ] `label_version` in model registry matches training data  
+- [ ] Clinical lead has reviewed [Appendix B.1 — Clinical label decision tree](#appendix-b1--clinical-label-decision-tree-for-sign-off)
+
+---
 
 ### 4.4 What makes a good trend feature?
 
@@ -376,7 +640,7 @@ Each row = one snapshot. Features = all snapshot features. Label = outcome for t
 
 ```
 Input:  snapshot_features (all L2 features for user-day T)
-Target: recovery_label (CORE-OM improved > X within 30d)
+Target: recovery_label per §4.3 (subscale-aware, not total-only)
 Output: recovery_probability ∈ [0, 1]
 ```
 
@@ -396,14 +660,14 @@ Output: recovery_probability ∈ [0, 1]
 }
 ```
 
-**Interpretation:** 82% predicted probability of clinically meaningful CORE-OM improvement in the next 30 days.
+**Interpretation:** 82% predicted probability of clinically meaningful improvement per §4.3 rules.
 
 ### 5.4 Model 2 — Relapse probability
 
 **Training:**
 
 ```
-Target: relapse_label (CORE-OM worsened > X within 30d)
+Target: relapse_label per §4.3 (subscale, risk, GAD-7 confirmers)
 ```
 
 **Inference example — high-risk user:**
@@ -1558,22 +1822,234 @@ During Phase 3, snapshot includes both:
 
 ### Appendix B — Label generation SQL (reference)
 
+Implements §4.3 subscale-aware rules. Adjust schema/table names to your warehouse.
+
 ```sql
--- Recovery label: CORE-OM improved by > 5 points within 30 days
+-- Pair baseline snapshot with nearest CORE-OM in [T+21, T+45]
+WITH followup AS (
+    SELECT
+        s.user_id,
+        s.snapshot_date,
+        s.core_om_total       AS total_t,
+        s.core_om_problems    AS problems_t,
+        s.core_om_wellbeing   AS wellbeing_t,
+        s.core_om_functioning AS functioning_t,
+        s.core_om_risk        AS risk_t,
+        f.core_om_total       AS total_f,
+        f.core_om_problems    AS problems_f,
+        f.core_om_wellbeing   AS wellbeing_f,
+        f.core_om_functioning AS functioning_f,
+        f.core_om_risk        AS risk_f,
+        ROW_NUMBER() OVER (
+            PARTITION BY s.user_id, s.snapshot_date
+            ORDER BY ABS(f.snapshot_date - (s.snapshot_date + INTERVAL '30 days'))
+        ) AS rn
+    FROM ml.snapshots s
+    JOIN ml.snapshots f
+      ON s.user_id = f.user_id
+     AND f.snapshot_date BETWEEN s.snapshot_date + INTERVAL '21 days'
+                             AND s.snapshot_date + INTERVAL '45 days'
+     AND f.core_om_total IS NOT NULL
+    WHERE s.core_om_total IS NOT NULL
+)
 SELECT
-    s.user_id,
-    s.snapshot_date,
+    user_id,
+    snapshot_date,
     CASE
-        WHEN f.core_om_score IS NOT NULL
-         AND (s.core_om_score - f.core_om_score) >= 5
-        THEN 1 ELSE 0
-    END AS recovery_label
-FROM snapshots s
-LEFT JOIN snapshots f
-    ON s.user_id = f.user_id
-   AND f.snapshot_date = s.snapshot_date + INTERVAL '30 days'
-WHERE s.snapshot_date <= CURRENT_DATE - INTERVAL '30 days';
+        WHEN total_f IS NULL THEN NULL  -- censored
+        WHEN risk_f >= 0.70
+          OR (total_f - total_t) >= 5
+          OR (problems_f - problems_t) >= 0.10
+          OR (risk_f - risk_t) >= 0.15
+        THEN 0  -- relapse=1 handled in relapse_label column
+        WHEN (total_f - total_t) <= -5
+          OR (problems_f - problems_t) <= -0.10
+          OR (wellbeing_f - wellbeing_t) >= 0.10
+          OR (functioning_f - functioning_t) >= 0.10
+        THEN CASE WHEN risk_f < 0.70 THEN 1 ELSE 0 END
+        ELSE 0
+    END AS recovery_label,
+    CASE
+        WHEN total_f IS NULL THEN NULL
+        WHEN risk_f >= 0.70
+          OR (total_f - total_t) >= 5
+          OR (problems_f - problems_t) >= 0.10
+          OR (risk_f - risk_t) >= 0.15
+        THEN 1
+        ELSE 0
+    END AS relapse_label
+FROM followup
+WHERE rn = 1;
 ```
+
+**Note:** SQL above is reference logic for data teams; the canonical rules remain §4.3.5–§4.3.9. Any warehouse implementation must produce identical labels to the pseudocode in §4.3.10 for a given `label_version`.
+
+### Appendix B.1 — Clinical label decision tree (for sign-off)
+
+**Purpose:** One-page reference for clinical, product, and ML teams. Full rules in [§4.3](#43-clinical-outcome-labels--production-specification).  
+**Label version:** `label_v2.0.0`  
+**Anchor:** Snapshot date **T** = training row date; follow-up window = **[T+21d, T+45d]** (target T+30d).
+
+---
+
+#### Threshold quick reference (defaults — clinical sign-off required)
+
+| Symbol | Value | Used in |
+|--------|-------|---------|
+| CORE-OM total MCID | **5 points** (raw) | R1, L1 |
+| Subscale MCID | **0.10** (normalized 0–1) | R2–R4, L2 |
+| GAD-7 MCID | **4 points** (raw) | Recovery confirmer, L5 |
+| Risk relapse threshold | **≥ 0.70** (normalized) | L3, recovery guard |
+| Risk increase | **≥ +0.15** (normalized delta) | L4 |
+| Engagement loss drop | **≥ 50%** relative vs baseline | engagement_loss |
+| Dropout inactivity | **30** consecutive days | dropout |
+| Dropout horizon | **60** days from T | dropout |
+
+**Direction rule:** Lower CORE-OM total = improvement. Higher `problems` norm = worse. Higher `wellbeing` / `functioning` norm = better.
+
+---
+
+#### Decision tree A — Clinical labels (`recovery_label`, `relapse_label`)
+
+```
+                              START: snapshot date T
+                                        │
+                    ┌───────────────────┴───────────────────┐
+                    │ User churned before follow-up window? │
+                    └───────────────────┬───────────────────┘
+                          YES           │           NO
+                            │           │
+                            ▼           ▼
+              recovery = NULL     CORE-OM follow-up in [T+21, T+45]?
+              relapse  = NULL              │
+              censored: dropout              ├── YES ──► Compare baseline (T) vs follow-up
+              before_window                  │
+                                             └── NO ───► GAD-7 confirmer path? (§4.3.5)
+                                                           │
+                                              ┌────────────┴────────────┐
+                                              │                         │
+                                           YES │                      NO │
+                                              ▼                         ▼
+                                    recovery=1, relapse=0      recovery=NULL, relapse=NULL
+                                    confidence=secondary       censored: no_followup_in_window
+                                    (needs GAD-7 Δ≤−4 AND
+                                     mood_slope_7d > 0)
+
+── When CORE-OM follow-up EXISTS ──
+
+                              ┌─ RELAPSE CHECK (first) ─┐
+                              │ Any L1–L5 true?         │
+                              └───────────┬─────────────┘
+                                    YES   │   NO
+                                      │   │
+                                      ▼   ▼
+                            relapse=1     ┌─ RECOVERY CHECK ─┐
+                            recovery=0    │ Any R1–R4 true   │
+                                          │ AND risk < 0.70? │
+                                          └────────┬─────────┘
+                                               YES │ NO
+                                                 │  │
+                                                 ▼  ▼
+                                          recovery=1   recovery=0
+                                          relapse=0      relapse=0
+                                                         (stable)
+```
+
+**Relapse criteria (L1–L5) — ANY one → relapse = 1**
+
+| ID | Condition |
+|----|-----------|
+| L1 | Total CORE-OM increased by ≥ 5 |
+| L2 | Problems subscale increased by ≥ 0.10 |
+| L3 | Risk subscale at follow-up ≥ 0.70 |
+| L4 | Risk subscale increased by ≥ 0.15 |
+| L5 | GAD-7 increased by ≥ 4 *(only when CORE-OM follow-up absent)* |
+
+**Recovery criteria (R1–R4) — ANY one + guard → recovery = 1**
+
+| ID | Condition |
+|----|-----------|
+| R1 | Total CORE-OM decreased by ≥ 5 |
+| R2 | Problems subscale decreased by ≥ 0.10 |
+| R3 | Wellbeing subscale increased by ≥ 0.10 |
+| R4 | Functioning subscale increased by ≥ 0.10 |
+| Guard | Risk at follow-up **< 0.70** AND relapse criteria **not** met |
+
+**Mutual exclusivity:** When not censored, `recovery_label` and `relapse_label` cannot both be 1.
+
+---
+
+#### Decision tree B — `dropout_label` (independent)
+
+```
+START: snapshot date T
+         │
+         ▼
+┌────────────────────────────────────────────────────────────┐
+│ dropout_label = 1 IF ANY within [T, T+60]:                 │
+│   • user_churned event                                     │
+│   • therapy program status = terminated                    │
+│   • no app_session AND no therapy_attended for 30 days     │
+└────────────────────────────────────────────────────────────┘
+         │
+         └── ELSE dropout_label = 0
+```
+
+Never null. Used for retention model — not a clinical assessment outcome.
+
+---
+
+#### Decision tree C — `engagement_loss_label` (independent)
+
+```
+START: snapshot date T
+         │
+         ▼
+  baseline = engagement_rate_7d at T
+  future   = engagement_rate_7d at T + 14 days
+         │
+         ▼
+┌────────────────────────────────────────────────────────────┐
+│ engagement_loss_label = 1 IF:                            │
+│   future ≤ baseline × 0.50   (50% relative drop)           │
+└────────────────────────────────────────────────────────────┘
+         │
+         └── ELSE engagement_loss_label = 0
+```
+
+Never null. Measures behavioral disengagement, not clinical change.
+
+---
+
+#### Worked outcomes (clinical review)
+
+| Scenario | recovery | relapse | Notes |
+|----------|----------|---------|-------|
+| Total 22→17, risk 0.20→0.15 | **1** | 0 | R1 + guard pass |
+| Total 18→19, risk 0.25→0.72 | 0 | **1** | L3 despite small total change |
+| Problems ↓, functioning ↓, total flat | 0 | 0 | Stable — subscales offset |
+| CORE-OM at T only | **null** | **null** | Censored — exclude from clinical training |
+| GAD-7 ↓4+, mood slope ↑, no CORE-OM F/U | **1** | 0 | Secondary confidence |
+| Churned day 10, no assessment | **null** | **null** | Censored; dropout likely **1** |
+
+---
+
+#### Clinical sign-off checklist
+
+| # | Item | Sign-off | Date |
+|---|------|----------|------|
+| 1 | Total MCID = 5 points acceptable for program population | ☐ Clinical lead | |
+| 2 | Subscale MCID = 0.10 (normalized) acceptable | ☐ Clinical lead | |
+| 3 | Risk threshold 0.70 aligned with escalation policy | ☐ Clinical lead | |
+| 4 | Assessment window T+21 to T+45 acceptable vs reassessment cadence | ☐ Clinical + Product | |
+| 5 | GAD-7 secondary recovery path acceptable when CORE-OM missing | ☐ Clinical lead | |
+| 6 | Censoring (null labels) preferred over defaulting to 0 | ☐ ML + Clinical | |
+| 7 | Labels used for ML training only — not shown as diagnosis to users | ☐ Product + Legal | |
+| 8 | `label_v2.0.0` registered in model governance | ☐ Engineering | |
+
+**Approved by:** _________________________ **Date:** _____________
+
+---
 
 ### Appendix C — CRS quick-reference card
 
@@ -1612,11 +2088,15 @@ WHERE s.snapshot_date <= CURRENT_DATE - INTERVAL '30 days';
 | **Direction** | 7-day trend of a metric: improving, stable, or declining |
 | **Band** | Categorical label (Low/Moderate/High) derived from score range |
 | **Cohort prior** | Default score (50) used during cold start for missing features |
+| **Censored label** | `recovery_label` or `relapse_label` = null when no valid follow-up; row excluded from clinical model training |
+| **MCID** | Minimum Clinically Important Difference — smallest change treated as meaningful |
+| **Label version** | Immutable identifier (e.g. `label_v2.0.0`) for audit when thresholds or rules change |
 
 ### Appendix E — Revision history
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.0.0 | 2026-06-05 | Engineering | Clinical labels v2 (§4.3 subscales, censoring, precedence); Appendix B.1 decision tree |
 | 1.0.0 | 2026-06-05 | Engineering | Initial production spec from `CRS Calculation with trends.docx` |
 
 ---

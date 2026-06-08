@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mindpeers.io/schemas/ingestion/events/confidence_checkin.v1.json",
+  "title": "confidence_checkin payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["score", "scale_min", "scale_max"],
+  "properties": {
+    "score": { "type": "number", "minimum": 0, "maximum": 5 },
+    "scale_min": { "type": "number", "const": 0 },
+    "scale_max": { "type": "number", "const": 5 },
+    "prompt_id": { "type": "string", "maxLength": 64 }
+  }
+}

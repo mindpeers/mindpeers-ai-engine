@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mindpeers.io/schemas/ingestion/events/heart_rate_daily.v1.json",
+  "title": "heart_rate_daily payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["resting_hr_bpm"],
+  "properties": {
+    "resting_hr_bpm": { "type": "integer", "minimum": 30, "maximum": 220 },
+    "hrv_rmssd_ms": { "type": "number", "minimum": 0, "maximum": 300 },
+    "hrv_source": { "type": "string", "maxLength": 64 },
+    "sample_count": { "type": "integer", "minimum": 0 }
+  }
+}

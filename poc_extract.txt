@@ -1,0 +1,989 @@
+System Overview
+This system is designed to provide mental health insights, predictions, and guidance using a hybrid architecture:
+LLM → reasoning & explanation
+ML → prediction
+Deterministic features → signals
+It supports:
+Users
+Therapists
+Organizations
+Core Problem: Cold Start
+This is a very important product + ML problem called the Cold Start Problem.
+It happens when:
+A new user joins
+Very little historical data exists
+Many features in your dataset are missing
+Your system must still produce useful insights, but it cannot rely on the full contextual dataset.
+So you must design different intelligence levels based on data maturity.
+The Problem
+Your full dataset requires:
+14 day windows
+30 day baselines
+7 day slopes
+cohort percentiles
+behavioral persistence
+But a new user might have:
+day 1: registration
+day 3: first therapy session
+day 5: mood entry
+So features like:
+mood_avg_14d
+engagement_slope_7d
+sleep_delta_30d
+cannot be computed yet.
+Solution: Multi-Stage Intelligence System
+Instead of one system, you build three intelligence levels.
+Stage 1 — Cold Start Intelligence (0-7 days)
+Available data:
+demographics
+first assessments
+initial therapy intake
+first few mood entries
+first sessions
+Possible questions:
+What are this user's initial mental health concerns?
+What risk profile does this user belong to?
+What therapy type might work best?
+What baseline risk category does this user fall into?
+Signals used:
+age_band
+gender
+organization
+initial clinical tests
+therapist intake notes
+Possible predictions:
+initial risk category
+recommended therapy intensity
+likelihood of engagement
+This is population-based inference, not personal trends.
+Stage 2 — Early Behavior Intelligence (7-30 days)
+Now you have early signals.
+You can compute:
+7 day slopes
+engagement trends
+early behavioral patterns
+Possible questions:
+Is the user engaging with therapy?
+Is mood improving after therapy sessions?
+Is engagement declining early?
+Possible predictions:
+early dropout risk
+engagement decline risk
+therapy response signals
+But still limited because: baseline windows incomplete
+Stage 3 — Full Contextual Intelligence (30+ days)
+Now your full dataset becomes available.
+You can compute:
+baseline deltas
+cohort percentiles
+persistence features
+multi-domain correlations
+Now the system can answer:
+Why is the user's mood declining?
+Is sleep affecting mental health?
+Is therapy effective?
+What risk signals exist?
+This is the full intelligence layer.
+How to Handle Missing Features Technically
+When features are missing, you should:
+Use missing flags
+Example:
+sleep_delta_30d = null
+sleep_delta_missing = 1
+Models can learn from missingness.
+Use cohort priors
+Example:
+If user has only 3 days data:
+Use statistics from similar users:
+same age
+same therapy type
+same organization
+Use fallback models
+Instead of one model:
+You use model tiers.
+Example:
+Cold Start Model
+Early User Model
+Full Context Model
+Each uses different features.
+Questions the System Can Answer for New Users
+Even with minimal data, the system can still answer questions.
+Examples:
+Initial Assessment Questions
+What mental health risks does this user initially show?
+Which therapy program is most suitable?
+What behavioral patterns should therapists monitor?
+Early Engagement Questions
+Is the user engaging with therapy sessions?
+Is early dropout risk increasing?
+Early Progress Questions
+Has the user's mood improved since therapy started?
+Is therapy affecting motivation or confidence?
+Product Experience (Important)
+The product should not show the same intelligence level for all users.
+Instead show messages like:
+New User
+“We're still learning about your patterns.”
+Growing Data
+“Early signals show improvement.”
+Mature Data
+“Based on your last 30 days…”
+This avoids misleading insights.
+Data Maturity Score
+Add a simple metric:
+data_maturity_score
+Example:
+Days Active
+Maturity
+0-7
+Low
+7-30
+Medium
+30+
+High
+Predictions confidence depends on this.
+Example Scenario
+User joined 5 days ago.
+Available data:
+age_band
+gender
+GAD7 score
+PHQ9 score
+2 therapy sessions
+2 mood entries
+System can still answer:
+What are the user's primary concerns?
+What therapy intensity may help?
+Is early engagement strong?
+But cannot answer:
+sleep-mood correlation
+long-term trends
+regression risk
+Yet.
+What Your ML System Should Do?
+When a user is new:
+If data_maturity < threshold:
+    use cold_start_model
+Else:
+    use contextual_model
+Why This Is Important
+Without this design:
+Your system will:
+produce unreliable predictions
+confuse users
+generate false alerts
+Handling cold start properly makes the system trustworthy.
+Key Takeaway
+Your intelligence system should adapt based on data maturity, not assume full historical context.
+Three levels:
+Cold Start Intelligence
+Early Behavior Intelligence
+Full Context Intelligence
+This is a core system design problem—and getting it right determines whether your platform feels intelligent or chaotic.
+You need two things:
+Intent Detection (What is the user asking?)
+Execution Routing (Do we use ML or not?)
+Let’s break this down practically and production-ready.
+What “Intent” Means in Your System?
+Intent = the type of analytical operation the system must perform to answer a query
+Intent Detection — How to Identify Intent?
+You are NOT doing generic NLP classification.
+You are doing domain-specific intent classification.
+Step 1: Define Intent Taxonomy (Very Important)
+You should NOT have 100 intents. Keep it controlled.
+Recommended Intent Types
+[
+"STATUS_CHECK",
+"TREND_ANALYSIS",
+"PROGRESS_EVALUATION",
+"THERAPY_EFFECTIVENESS",
+"STABILITY_CHECK",
+"CORRELATION_ANALYSIS",
+"ROOT_CAUSE_ANALYSIS",
+"PATTERN_DETECTION",
+"BEHAVIORAL_ANALYSIS",
+"ANOMALY_EXPLANATION",
+"GUIDANCE_GENERAL",
+"NEXT_BEST_ACTION",
+"THERAPIST_RECOMMENDATION",
+"HABIT_RECOMMENDATION",
+"ENGAGEMENT_IMPROVEMENT",
+"RELAPSE_PREVENTION_GUIDANCE",
+"RISK_PREDICTION_DROPOUT",
+"RISK_PREDICTION_REGRESSION",
+"RISK_PREDICTION_ENGAGEMENT",
+"RISK_PREDICTION_RELAPSE",
+"RISK_PREDICTION_ESCALATION",
+"OUTCOME_PREDICTION",
+"RECOVERY_PROBABILITY",
+"USER_PRIORITIZATION",
+"THERAPIST_LOAD_OPTIMIZATION",
+"FOLLOWUP_RECOMMENDATION",
+"INTERVENTION_TARGETING",
+"RESOURCE_ALLOCATION",
+"COHORT_RISK_DISTRIBUTION",
+"COHORT_COMPARISON",
+"PEER_COMPARISON",
+"SELF_BASELINE_COMPARISON",
+"PROGRAM_COMPARISON",
+"EARLY_WARNING_SIGNAL",
+"DECLINE_DETECTION",
+"WITHDRAWAL_DETECTION",
+"ENGAGEMENT_DROP_ALERT",
+"DATA_QUALITY_CHECK",
+"DATA_COMPLETENESS",
+"CONFIDENCE_EXPLANATION",
+"MODEL_EXPLANATION"
+]
+Step 2: Use LLM for Intent Classification
+Instead of building a classifier model, use LLM:
+Prompt Example
+Classify the user query into one of the following intents:
+[TREND_ANALYSIS, CORRELATION_ANALYSIS, RISK_PREDICTION, STATUS_CHECK, ...]
+Query:
+"Is my mood improving?"
+Return only the intent.
+Output
+TREND_ANALYSIS
+Step 3: Add Confidence
+You can ask LLM:
+Return intent and confidence (0-1)
+If confidence < threshold → fallback logic
+Mapping Intent → System Behavior
+Question: “How to know ML will not work?”
+You don’t “detect” it dynamically.
+You predefine it in architecture.
+Intent → Execution Mapping Table
+Intent
+ML Needed?
+Why
+TREND_ANALYSIS
+NO
+deterministic (slopes, averages)
+CORRELATION_ANALYSIS
+NO
+feature relationships
+STATUS_CHECK
+NO
+current state
+COHORT_COMPARISON
+NO
+ranking/percentiles
+THERAPY_EFFECTIVENESS
+NO
+delta-based
+EARLY_WARNING
+MAY/MAY NOT
+rules or ML
+RISK_PREDICTION
+YES
+requires trained model
+GUIDANCE
+NO
+LLM reasoning
+Core Rule
+If question = future prediction → ML required
+Else → LLM + features
+Decision Engine (Critical Component)
+You need a Routing Layer.
+Pseudocode
+def route_query(query):
+    intent = classify_intent(query)
+    if intent in ["RISK_PREDICTION"]:
+        use_ml = True
+    else:
+        use_ml = False
+    features = fetch_features(intent)
+    if use_ml:
+        prediction = call_ml_model(features)
+    else:
+        prediction = None
+    response = call_llm(query, features, prediction)
+    return response
+Example Walkthroughs
+Example 1
+Query:
+Is my mood improving?
+Intent:
+TREND_ANALYSIS
+Explanation:
+ML: No
+Why?
+Uses slope
+No future prediction
+Example 2
+Query:
+Is my sleep affecting my mood?
+Intent:
+CORRELATION_ANALYSIS
+Explanation:
+ML: No
+Example 3
+Query:
+Will I drop out?
+Intent:
+RISK_PREDICTION
+Explanation:
+ML: Yes
+Example 4
+Query:
+Why am I feeling worse?
+Intent:
+DIAGNOSTIC / CORRELATION
+Explanation:
+ML: No
+Example 5
+Query:
+Am I at high risk?
+Intent:
+RISK_PREDICTION
+Explanation:
+ML: Yes
+Common Mistake (Very Important)
+Many teams try: “Let LLM decide whether to use ML”
+It's a bad idea.Because: LLM is not deterministic. It may skip ML. It may hallucinate
+Correct Approach
+You define:
+Intent → Execution Plan
+NOT: LLM decides execution
+Feature Mapping by Intent
+Each intent should map to features.
+Map intent → features:
+If intent == “trend”:
+   Features = [ “*_slope_7d”, “*_avg_14d”, “*_volatility”]
+Example
+TREND_ANALYSIS
+*_slope_7d
+*_avg_14d
+*_volatility
+CORRELATION
+sleep + mood
+engagement + mood
+exercise + fatigue
+RISK_PREDICTION
+engagement
+mood
+attendance
+flags
+LLM Prompt Builder
+Question + Intent + Features + Predictions → Prompt
+LLM Prompt Strategy
+LLM should NOT guess.
+You pass structured context:
+Intent: TREND_ANALYSIS
+Data:
+mood_slope_7d = -0.4
+mood_avg_14d = 1.8
+Explain trend clearly.
+Final Architecture (Intent-Aware System)
+User / Therapist / HR Query
+     ↓
+LLM Intent Classifier
+     ↓
+Intent Router
+     ↓
+Feature Fetcher
+     ↓
+ML Model (if required)
+     ↓
+LLM Reasoning Engine
+     ↓  
+Action Engine
+     ↓
+Response
+COMPLETE QUESTION MAPPING
+All questions reduce to:
+Effectiveness → Guidance → Operational Efficiency
+Across:
+Cold Start
+Early
+Full Context
+EFFECTIVENESS (Measure “Is it working?”)
+Cold Start
+Questions
+What is the user’s baseline mental health state?
+What severity level does the user fall into?
+Is the user high-risk at onboarding?
+What are primary concerns (anxiety, depression)?
+How does this user compare to cohort?
+Is intervention needed immediately?
+Is the user suitable for this program?
+Early Stage
+Questions
+Is the user improving emotionally?
+Is mood trending upward?
+Is motivation improving?
+Is therapy showing early impact?
+Are anxiety/depression signals improving?
+Is engagement improving?
+Is behavior becoming consistent?
+Is progress visible?
+Full Context
+Questions
+Is therapy effective overall?
+Has mental health improved long-term?
+Are improvements sustained?
+Has the user plateaued?
+Is relapse happening?
+What is recovery rate?
+What is overall improvement score?
+GUIDANCE (Make Me Better)
+Cold Start
+Questions
+Which therapy type is best?
+What should therapist focus on?
+What should user do first?
+What habits should user build?
+Should journaling be recommended?
+What reduces early risk?
+Early Stage
+Questions
+What should therapist change?
+How to improve engagement?
+What habits should user follow?
+How to prevent dropout?
+What intervention works now?
+What should user focus on this week?
+Full Context
+Questions
+What should therapist do next?
+What intervention works best?
+How to reduce relapse risk?
+What habits improve long-term health?
+What personalized plan is needed?
+What actions reduce risk?
+What should be next therapy strategy?
+OPERATIONAL EFFICIENCY (Optimize System)
+Cold Start
+Questions
+How to allocate therapists?
+Which users need priority onboarding?
+How to group users by severity?
+How to schedule sessions?
+What is expected engagement?
+Early Stage
+Questions
+Which users are at risk?
+Who should therapist prioritize?
+Who needs follow-up?
+How to allocate therapist time?
+Where is engagement dropping?
+How to reduce early dropout?
+Full Context
+Questions
+Which users need immediate intervention?
+Which programs are effective?
+What is ROI?
+Where are dropout spikes?
+How to optimize cost?
+Which cohorts underperform?
+What interventions give best ROI?
+HOW SYSTEM ANSWERS THESE
+Now the important part:
+How does the hybrid system answer each category?
+EFFECTIVENESS → HOW TO ANSWER
+Nature
+Descriptive + Trend-based
+System Flow
+Intent → TREND / STATUS
+        ↓
+Fetch contextual features
+        ↓
+NO ML (mostly)
+        ↓
+LLM explains trends
+Data Used
+averages (mood_avg_14d)
+deltas (core_om_delta_30d)
+slopes (mood_slope_7d)
+volatility
+Example
+Query
+“Is the user improving?”
+System
+mood_slope_7d = +0.2
+core_om_delta = -0.15
+LLM Output
+The user is showing improvement as emotional scores are increasing and clinical indicators are reducing.
+Key Insight
+Effectiveness = Signal Computation (no ML required)
+GUIDANCE → HOW TO ANSWER
+Nature
+Diagnostic + Prescriptive
+System Flow
+Intent → GUIDANCE
+        ↓
+Fetch signals + patterns
+        ↓
+(Optional ML if risk involved)
+        ↓
+LLM generates recommendation
+Data Used
+cross-domain signals
+flags (withdrawal_flag)
+correlations
+risk scores (optional)
+Example
+Query
+“What should therapist do?”
+System
+sleep ↓
+mood ↓
+engagement ↓
+LLM Output
+The therapist should focus on improving sleep hygiene and increasing engagement through structured activities.
+Key Insight
+Guidance = Context + LLM reasoning (+ optional ML)
+OPERATIONAL EFFICIENCY → HOW TO ANSWER
+Nature
+Aggregation + Prediction + Optimization
+System Flow
+Intent → OPERATIONAL
+        ↓
+Aggregate across users
+        ↓
+ML models (often used)
+        ↓
+LLM summarizes insights
+Data Used
+cohort aggregates
+dropout rates
+engagement metrics
+ROI features
+Example
+Query
+“Which users should therapist prioritize?”
+System
+risk_score sorted descending
+Output
+Users with highest composite risk percentile should be prioritized.
+Key Insight
+Operational = Aggregation + ML + Ranking
+FINAL UNIFIED EXECUTION MODEL
+Universal Pipeline
+User Query
+     ↓
+Intent Classification
+     ↓
+Category Mapping
+     ↓
+Execution Path
+     ↓
+Feature Retrieval
+     ↓
+ML (if needed)
+     ↓
+LLM Reasoning
+     ↓
+Response
+CATEGORY → EXECUTION TABLE
+Category
+ML Needed
+LLM Needed
+Data Type
+Effectiveness
+No
+Yes
+trends
+Guidance
+May/May Not
+Yes
+patterns
+Operational
+Yes
+Yes
+aggregates
+Intent → Feature → Model Mapping (Config)
+Use a declarative config so routing is deterministic (no LLM deciding execution).
+JSON Config (drop-in)
+{
+  "config_version": "1.0.0",
+  "last_updated": "2026-03-24",
+  "defaults": {
+    "timezone": "UTC",
+    "confidence_threshold": 0.6,
+    "data_maturity_rules": {
+      "cold_start_days": 7,
+      "early_days": 30
+    },
+    "missing_feature_strategy": "impute_with_cohort_or_flag",
+    "max_features_per_intent": 25
+  },
+  "feature_groups": {
+    "emotional_core": [
+      "mood_avg_14d",
+      "mood_slope_7d",
+      "mood_volatility_14d",
+      "mood_delta_30d",
+      "mood_persistence_decline_days",
+      "motivation_avg_14d",
+      "motivation_slope_7d",
+      "confidence_avg_14d",
+      "confidence_slope_7d"
+    ],
+    "clinical_scores": [
+      "gad7_normalized_latest",
+      "phq9_normalized_score",
+      "core_om_normalized_score",
+      "core_om_delta_30d",
+      "ptsd_normalized_score",
+      "asrs_partA_normalized",
+      "asrs_partB_normalized"
+    ],
+    "behavioral_engagement": [
+      "engagement_rate_7d",
+      "engagement_slope_7d",
+      "engagement_delta_30d",
+      "engagement_persistence_low_days",
+      "missed_sessions_30d",
+      "therapy_attendance_rate_30d"
+    ],
+    "physiological": [
+      "sleep_delta_30d",
+      "sleep_slope_7d",
+      "sleep_persistence_low_days",
+      "activity_slope_7d",
+      "resting_hr_relative",
+      "fatigue_slope_7d",
+      "hydration_slope_7d"
+    ],
+    "derived_flags": [
+      "withdrawal_flag",
+      "sleep_mood_coupled_decline",
+      "cortisol_flag",
+      "intent_behavior_mismatch_flag"
+    ],
+    "cohort_features": [
+      "sleep_percentile_cohort",
+      "engagement_percentile_cohort",
+      "composite_risk_percentile"
+    ],
+    "meta": [
+      "data_completeness_score",
+      "feature_version",
+      "weeks_in_program"
+    ]
+  },
+  "models": {
+    "dropout_model_v1": {
+      "type": "classification",
+      "output": "probability",
+      "target": "label_dropout_14d",
+      "thresholds": {
+        "low": 0.3,
+        "moderate": 0.6,
+        "high": 0.8
+      }
+    },
+    "regression_model_v1": {
+      "type": "classification",
+      "output": "probability",
+      "target": "label_regression_30d",
+      "thresholds": {
+        "low": 0.25,
+        "moderate": 0.55,
+        "high": 0.75
+      }
+    },
+    "engagement_decay_model_v1": {
+      "type": "classification",
+      "output": "probability",
+      "target": "label_engagement_decay_7d",
+      "thresholds": {
+        "low": 0.3,
+        "moderate": 0.6,
+        "high": 0.8
+      }
+    },
+    "priority_ranking_v1": {
+      "type": "ranking",
+      "output": "score",
+      "target": "composite_priority_score"
+    }
+  },
+  "intents": {
+    "STATUS_CHECK": {
+      "category": "EFFECTIVENESS",
+      "scope": "user",
+      "feature_groups": ["emotional_core", "clinical_scores", "cohort_features"],
+      "use_ml": false,
+      "prompt_template": "status_explain_v1",
+      "data_maturity": ["cold_start", "early", "full"]
+    },
+    "TREND_ANALYSIS": {
+      "category": "EFFECTIVENESS",
+      "scope": "user",
+      "feature_groups": ["emotional_core", "behavioral_engagement", "physiological"],
+      "use_ml": false,
+      "prompt_template": "trend_explain_v1",
+      "data_maturity": ["early", "full"]
+    },
+    "CORRELATION_ANALYSIS": {
+      "category": "GUIDANCE",
+      "scope": "user",
+      "feature_groups": ["emotional_core", "physiological", "behavioral_engagement", "derived_flags"],
+      "use_ml": false,
+      "prompt_template": "correlation_explain_v1",
+      "data_maturity": ["early", "full"]
+    },
+    "GUIDANCE": {
+      "category": "GUIDANCE",
+      "scope": "user",
+      "feature_groups": ["emotional_core", "behavioral_engagement", "physiological", "derived_flags"],
+      "use_ml": false,
+      "prompt_template": "guidance_v1",
+      "data_maturity": ["cold_start", "early", "full"]
+    },
+    "EARLY_WARNING": {
+      "category": "GUIDANCE",
+      "scope": "user",
+      "feature_groups": ["derived_flags", "emotional_core", "behavioral_engagement"],
+      "use_ml": false,
+      "prompt_template": "early_warning_v1",
+      "data_maturity": ["early", "full"]
+    },
+    "RISK_PREDICTION_DROPOUT": {
+      "category": "OPERATIONAL",
+      "scope": "user",
+      "feature_groups": ["behavioral_engagement", "emotional_core", "derived_flags"],
+      "use_ml": true,
+      "model": "dropout_model_v1",
+      "prompt_template": "risk_explain_v1",
+      "data_maturity": ["early", "full"],
+      "actions": [
+        {
+          "condition": "prediction >= 0.8",
+          "action": "trigger_high_risk_nudge"
+        },
+        {
+          "condition": "prediction >= 0.6",
+          "action": "notify_therapist"
+        }
+      ]
+    },
+    "RISK_PREDICTION_REGRESSION": {
+      "category": "OPERATIONAL",
+      "scope": "user",
+      "feature_groups": ["emotional_core", "clinical_scores", "physiological"],
+      "use_ml": true,
+      "model": "regression_model_v1",
+      "prompt_template": "risk_explain_v1",
+      "data_maturity": ["early", "full"]
+    },
+    "RISK_PREDICTION_ENGAGEMENT": {
+      "category": "OPERATIONAL",
+      "scope": "user",
+      "feature_groups": ["behavioral_engagement", "emotional_core"],
+      "use_ml": true,
+      "model": "engagement_decay_model_v1",
+      "prompt_template": "risk_explain_v1",
+      "data_maturity": ["early", "full"]
+    },
+    "COHORT_COMPARISON": {
+      "category": "EFFECTIVENESS",
+      "scope": "cohort",
+      "feature_groups": ["cohort_features", "emotional_core"],
+      "use_ml": false,
+      "prompt_template": "cohort_explain_v1",
+      "data_maturity": ["early", "full"]
+    },
+    "THERAPY_EFFECTIVENESS": {
+      "category": "EFFECTIVENESS",
+      "scope": "user",
+      "feature_groups": ["clinical_scores", "emotional_core", "behavioral_engagement"],
+      "use_ml": false,
+      "prompt_template": "therapy_effect_v1",
+      "data_maturity": ["early", "full"]
+    },
+    "PRIORITIZATION": {
+      "category": "OPERATIONAL",
+      "scope": "therapist",
+      "feature_groups": ["cohort_features", "derived_flags", "behavioral_engagement"],
+      "use_ml": true,
+      "model": "priority_ranking_v1",
+      "prompt_template": "priority_explain_v1",
+      "data_maturity": ["early", "full"]
+    },
+    "ORG_ROI_ANALYSIS": {
+      "category": "OPERATIONAL",
+      "scope": "organization",
+      "feature_groups": ["cohort_features"],
+      "use_ml": true,
+      "model": "roi_model_v1",
+      "prompt_template": "org_explain_v1",
+      "data_maturity": ["full"]
+    }
+  },
+  "validation": {
+    "require_features": true,
+    "max_missing_allowed": 0.4,
+    "fallback_on_low_data": "use_cohort_average"
+  },
+  "guardrails": {
+    "no_diagnosis": true,
+    "no_medication_advice": true,
+    "tone": "supportive",
+    "uncertainty_language": true
+  }
+}
+Execution Pseudocode
+def handle_query(query, user_id):
+    intent = classify_intent(query)
+    config = INTENT_CONFIG["intents"][intent]
+    features = fetch_features(user_id, config["features"])
+    prediction = None
+    if config.get("use_ml"):
+        prediction = run_model(config["model"], features)
+    prompt = build_prompt(
+        template=config["llm_template"],
+        query=query,
+        features=features,
+        prediction=prediction
+    )
+    return call_llm(prompt)
+LLM Prompt Templates (Safe + Scalable)
+All prompts follow strict structure:
+ROLE → CONTEXT → INSTRUCTIONS → CONSTRAINTS → OUTPUT FORMAT
+STATUS / EFFECTIVENESS
+[TEMPLATE: status_explain_v1]
+You are a mental health insight assistant.
+User Question:
+{query}
+Context:
+- mood_avg_14d: {mood_avg_14d}
+- core_om_delta_30d: {core_om_delta_30d}
+- gad7_score: {gad7}
+- phq9_score: {phq9}
+Instructions:
+- Explain current mental health status clearly
+- Mention improvement or decline
+- Keep tone supportive, not clinical diagnosis
+Constraints:
+- Do NOT diagnose any condition
+- Do NOT give medical advice
+- Be concise (3–4 sentences)
+Output:
+Plain text explanation
+TREND ANALYSIS
+[TEMPLATE: trend_explain_v1]
+You are analyzing trends in user behavior.
+User Question:
+{query}
+Context:
+- mood_slope_7d: {mood_slope}
+- volatility: {volatility}
+- engagement_slope_7d: {engagement_slope}
+Instructions:
+- Explain whether trend is improving, stable, or declining
+- Highlight key signals
+- Avoid speculation
+Constraints:
+- No diagnosis
+- No prediction
+- Use neutral tone
+Output:
+Short explanation (2–3 sentences)
+CORRELATION
+[TEMPLATE: correlation_explain_v1]
+You are identifying relationships between signals.
+User Question:
+{query}
+Context:
+- sleep_delta_30d: {sleep_delta}
+- mood_slope_7d: {mood_slope}
+- coupled_flag: {sleep_mood_flag}
+Instructions:
+- Explain possible relationship between variables
+- Use "may be related", not causal certainty
+Constraints:
+- No medical claims
+- No strong causation statements
+Output:
+Explanation + possible implication
+RISK EXPLANATION (WITH ML)
+[TEMPLATE: risk_explain_v1]
+You are explaining a risk prediction.
+User Question:
+{query}
+Prediction:
+- risk_score: {risk_score}
+Context:
+- engagement_rate_7d: {engagement}
+- mood_slope_7d: {mood_slope}
+- missed_sessions: {missed_sessions}
+Instructions:
+- Explain why risk is high/low
+- Translate probability into simple language
+- Suggest general actions
+Constraints:
+- No guarantees
+- No fear-inducing language
+- No diagnosis
+Output:
+Risk explanation + 1–2 suggestions
+GUIDANCE
+[TEMPLATE: guidance_v1]
+You are providing supportive guidance.
+User Question:
+{query}
+Context:
+- mood trend
+- engagement
+- sleep
+Instructions:
+- Suggest 2–3 practical actions
+- Keep suggestions simple and achievable
+Constraints:
+- No medical advice
+- No therapy replacement
+- Positive tone
+Output:
+Bullet points
+EARLY WARNING
+[TEMPLATE: early_warning_v1]
+You are identifying early warning signals.
+Context:
+- withdrawal_flag: {withdrawal}
+- persistence_days: {persistence}
+Instructions:
+- Explain concern calmly
+- Suggest attention, not alarm
+Constraints:
+- No panic language
+- No diagnosis
+Output:
+Concern + recommendation
+PRIORITIZATION (Therapist)
+[TEMPLATE: priority_explain_v1]
+You are assisting a therapist.
+Context:
+- risk_score
+- engagement
+- mood trend
+Instructions:
+- Rank urgency
+- Explain reason briefly
+Output:
+Priority label + reason
+Safety Guardrails (MANDATORY)
+Add globally:
+Never diagnose
+Never prescribe medication
+Use uncertainty language ("may", "suggests")
+Encourage professional help when needed
+FINAL SYSTEM DESIGN
+Query
+  ↓
+Intent Classifier
+  ↓
+Mapping Config (this JSON)
+  ↓
+Feature Fetcher
+  ↓
+ML Model (if required)
+  ↓
+Prompt Builder (templates above)
+  ↓
+LLM
+  ↓
+Response
