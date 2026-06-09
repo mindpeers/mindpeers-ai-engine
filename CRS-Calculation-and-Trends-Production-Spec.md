@@ -790,7 +790,7 @@ T → T+30:
 
 #### 4.3.7 Dropout label (`dropout_label`)
 
-**Independent of clinical labels.** Program/business outcome.
+**Independent of clinical labels.** Program/business outcome — answers: *“Did this user leave the program within 60 days after snapshot T?”*
 
 ```
 dropout_label = 1 IF ANY of:
@@ -799,6 +799,76 @@ dropout_label = 1 IF ANY of:
   - therapy program status = 'terminated'
 ELSE 0
 ```
+
+##### What `user_churned event within [T, T + DROPOUT_HORIZON_DAYS]` means
+
+| Term | Meaning |
+|------|---------|
+| **`user_churned`** | An **L0 ingested event** (`event_type = "user_churned"`) emitted when the user **officially leaves** the MindPeers program — e.g. cancels subscription, closes account, or is marked churned in CRM. Source: `auth_crm`. See [Data Ingestion §12.2](./Data-Ingestion-Layer-Production-Spec.md#122-example--dropout-label). |
+| **Event** | One row in `raw.events` with `user_id`, `occurred_at` (when churn happened), and payload fields such as `churn_reason`, `last_session_date`. |
+| **T** | Snapshot date — the training row date we are labeling. |
+| **`DROPOUT_HORIZON_DAYS`** | Observation window after T. Default = **60 days**. |
+| **`[T, T + 60 days]`** | Inclusive date range: churn must happen **on or after T** and **on or before T+60**. |
+
+**In plain language:** For a training row dated **1 Jan**, if the system records a **`user_churned` event anytime from 1 Jan through 2 Mar** (60 days later), that row gets **`dropout_label = 1`**.
+
+**Example — churn inside window → dropout = 1:**
+
+```
+Snapshot T           = 2025-01-01
+DROPOUT_HORIZON_DAYS = 60
+Window               = 2025-01-01 to 2025-03-02 (inclusive)
+
+user_churned event:
+  occurred_at = 2025-02-01
+  payload.churn_reason = "voluntary_exit"
+  payload.last_session_date = "2025-01-28"
+
+Feb 1 is inside [Jan 1, Mar 2]  →  dropout_label = 1
+```
+
+**Example — churn after window → dropout = 0 (for this rule):**
+
+```
+Snapshot T = 2025-01-01
+user_churned occurred_at = 2025-04-15   (105 days after T)
+
+Apr 15 is AFTER T+60  →  this rule does NOT fire
+                         (check other dropout rules: inactivity, terminated)
+```
+
+**Example — no churn event but user went inactive:**
+
+```
+No user_churned event
+But no app_session AND no therapy_attended for 30 consecutive days
+→ dropout_label = 1 via the inactivity rule (second bullet)
+```
+
+**What `user_churned` is NOT:**
+
+| Not this | Why |
+|----------|-----|
+| Low engagement for a few days | Needs 30 consecutive inactive days OR explicit churn event |
+| Missing mood check-ins only | Inactivity rule requires **both** no app sessions **and** no therapy attendance |
+| `recovery_label` or `relapse_label` | Dropout is a **program retention** outcome, not a clinical assessment outcome |
+| An L2 feature column | It is a **source event**; the label job reads it offline to set `dropout_label` |
+
+**Typical `user_churned` payload (from ingestion):**
+
+```json
+{
+  "event_type": "user_churned",
+  "user_id": "1003",
+  "occurred_at": "2025-02-01T00:00:00+00:00",
+  "payload": {
+    "churn_reason": "voluntary_exit",
+    "last_session_date": "2025-01-28"
+  }
+}
+```
+
+Common `churn_reason` values (product-defined): `voluntary_exit`, `payment_failed`, `admin_removed`, `program_completed_early`.
 
 #### 4.3.8 Engagement loss label (`engagement_loss_label`)
 
