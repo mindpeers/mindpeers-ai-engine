@@ -156,13 +156,38 @@ CRS becomes **interpretable**: every point on the score maps to a weighted contr
 
 **Example — label definition for Recovery (see §4.3 for full rules):**
 
-Recovery and relapse labels use **CORE-OM subscales + total**, GAD-7 confirmers, assessment windows (T+21 to T+45 days), censoring when no follow-up, and relapse-before-recovery precedence. CORE-OM total alone is not sufficient.
+Recovery and relapse labels compare a **baseline assessment at snapshot date T** with a **follow-up assessment** roughly 30 days later (any date in **T+21 to T+45**). CORE-OM total alone is not sufficient — subscales matter too.
+
+**In plain language — when is `recovery_label = 1`?**
+
+All three conditions below must be true:
+
+| # | Condition | Meaning |
+|---|-----------|---------|
+| 1 | **Improvement detected (R1–R4)** | At least **one** of four rules shows meaningful clinical improvement between T and follow-up (e.g. total score dropped by ≥5 points, or problems subscale improved by ≥0.10) |
+| 2 | **Risk guard passes** | Risk subscale at follow-up is **below 0.70** — we do not call it recovery if risk is elevated |
+| 3 | **Not a relapse** | None of the relapse rules (L1–L5) fired — relapse is checked **first**; if relapse = 1, recovery cannot be 1 |
+
+**When is `recovery_label = null` (not 0)?**
+
+There is **no valid follow-up assessment** in the window T+21 to T+45 (and no valid GAD-7 secondary path). We **do not guess** — the row is excluded from training rather than labeled as “no recovery.”
+
+**When is `recovery_label = 0`?**
+
+Follow-up exists, user is **not** in relapse, but **none** of R1–R4 improvement rules met → clinically **stable**, not improved.
 
 ```
-recovery_label = 1  IF  any subscale/total MCID met (R1–R4)
-                    AND risk guard passes
-                    AND relapse_criteria NOT met
-recovery_label = null  IF  no valid follow-up in assessment window
+IF no follow-up in [T+21, T+45]:
+    recovery_label = null          ← unknown / censored
+
+ELSE IF any relapse rule L1–L5 is true:
+    recovery_label = 0               ← relapse takes precedence (relapse_label = 1)
+
+ELSE IF (any of R1–R4 is true) AND (risk at follow-up < 0.70):
+    recovery_label = 1               ← meaningful improvement
+
+ELSE:
+    recovery_label = 0               ← stable, no meaningful change
 ```
 
 **Example — label rows in training data:**
