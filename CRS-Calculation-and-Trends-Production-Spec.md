@@ -158,23 +158,264 @@ CRS becomes **interpretable**: every point on the score maps to a weighted contr
 
 Recovery and relapse labels compare a **baseline assessment at snapshot date T** with a **follow-up assessment** roughly 30 days later (any date in **T+21 to T+45**). CORE-OM total alone is not sufficient — subscales matter too.
 
-**In plain language — when is `recovery_label = 1`?**
+#### 2.2.1 Glossary — terms used in label rules
 
-All three conditions below must be true:
+| Term | Definition | Example in this spec |
+|------|------------|----------------------|
+| **CORE-OM** | Clinical Outcome in Routine Evaluation — a standardized questionnaire measuring psychological distress and functioning. Users complete it in the app; scores are stored as `assessment_completed` events. | Total score 22 at baseline, 17 at follow-up |
+| **Subscale** | A **section** of CORE-OM measuring one domain. We use four subscales, each stored as a **normalized** score between 0 and 1. | `wellbeing_norm = 0.45`, `problems_norm = 0.55` |
+| **Total score** | The overall CORE-OM score in **raw points** (not 0–1). On CORE-OM, **lower total = less distress = better**. | 22 → 17 is improvement (dropped by 5) |
+| **Normalized score** | Subscale value rescaled to **0.0–1.0** so different subscales are comparable. Stored in L2 as `core_om_wellbeing`, `core_om_problems`, etc. | `problems_norm = 0.55` means moderate problem level |
+| **MCID** | **Minimum Clinically Important Difference** — the smallest change we treat as *meaningful*, not noise. Below MCID = "stable"; at or above MCID = "meaningful change." | Total MCID = 5 points; subscale MCID = 0.10 |
+| **Snapshot date (T)** | The date of the training row — "what did we know about the user on this day?" Labels look **forward** from T. | `snapshot_date = 2024-10-01` |
+| **Follow-up** | The next CORE-OM assessment in window **[T+21d, T+45d]**, picked as closest to T+30d. | Assessment on 2024-10-31 for T = 2024-10-01 |
+| **Assessment window** | Valid follow-up must fall between 21 and 45 days after T. Avoids labeling from assessments too early or too late. | T = Oct 1 → valid follow-up Oct 22 – Nov 15 |
+| **Censoring (`null`)** | When we **cannot** assign a clinical label because follow-up data is missing. `null` ≠ 0. Censored rows are **excluded** from recovery/relapse model training. | User never retook CORE-OM → `recovery_label = null` |
+| **Risk guard** | Safety check: even if scores improved, we **block** recovery if the **risk subscale** at follow-up is ≥ 0.70 (elevated risk). | Problems improved but `risk_norm = 0.72` → not recovery |
+| **GAD-7** | Generalized Anxiety Disorder 7-item scale. Used as a **secondary confirmer** for recovery when CORE-OM follow-up is missing. Lower GAD-7 = less anxiety = better. | GAD-7: 12 → 7 (drop of 5 ≥ MCID 4) |
+| **R1–R4** | **Recovery** rules — any one can trigger `recovery_label = 1` (with guards). | R1 = total improved by ≥ 5 points |
+| **L1–L5** | **Relapse** rules — any one can trigger `relapse_label = 1`. Checked **before** recovery. | L3 = risk subscale ≥ 0.70 at follow-up |
+| **Precedence** | Relapse is evaluated first. If relapse fires, recovery cannot be 1. | L3 true → `relapse=1`, `recovery=0` even if R2 also true |
+
+#### 2.2.2 CORE-OM structure — four subscales and direction of improvement
+
+When a user completes CORE-OM, we store **one total score** and **four subscales**:
+
+| Subscale | L2 column | What it measures | Higher score means | Improvement direction |
+|----------|-----------|------------------|--------------------|-----------------------|
+| **Wellbeing** | `core_om_wellbeing` | General positive mental state | Better wellbeing | **Increase** by ≥ 0.10 (R3) |
+| **Problems** | `core_om_problems` | Distress, symptoms, difficulties | More problems / worse | **Decrease** by ≥ 0.10 (R2) |
+| **Functioning** | `core_om_functioning` | Daily functioning, getting things done | Better functioning | **Increase** by ≥ 0.10 (R4) |
+| **Risk** | `core_om_risk` | Risk-related items (self-harm, etc.) | Higher risk | **Decrease** is good; ≥ 0.70 at follow-up blocks recovery and may trigger relapse (L3) |
+
+**Why subscales matter:** Total score can stay flat while subscales move in opposite directions.
+
+```
+Example — mixed subscales, total unchanged:
+  T:       problems=0.60, functioning=0.55, total=20
+  T+30:    problems=0.42, functioning=0.40, total=20
+
+  Problems improved (−0.18) but functioning worsened (−0.15)
+  → Neither recovery nor relapse (stable), NOT censored
+  → recovery_label = 0, relapse_label = 0
+```
+
+#### 2.2.3 Recovery rules R1–R4 — detailed with examples
+
+**Rule:** `recovery_label = 1` requires **at least one** of R1–R4 to be true, **plus** risk guard (risk < 0.70 at follow-up) and **no** relapse (L1–L5).
+
+Default MCID values: total = **5 points**; each subscale = **0.10** normalized.
+
+---
+
+**R1 — Total CORE-OM improvement**
+
+| | |
+|---|---|
+| **Formula** | `(total_followup − total_T) ≤ −5` |
+| **Meaning** | Overall distress dropped by at least 5 raw points |
+| **Passes?** | Total fell by 5 or more |
+
+```
+Example — R1 PASS → contributes to recovery_label = 1:
+  T:        total = 22
+  Follow-up: total = 16     → delta = 16 − 22 = −6  (≤ −5) ✓
+  risk at follow-up = 0.15  (< 0.70) ✓
+  No L1–L5 fired            ✓
+  → recovery_label = 1
+```
+
+```
+Example — R1 FAIL (change too small):
+  T:        total = 18
+  Follow-up: total = 16     → delta = −2  (needs ≤ −5) ✗
+  → R1 does not fire; check R2–R4 instead
+```
+
+---
+
+**R2 — Problems subscale improvement**
+
+| | |
+|---|---|
+| **Formula** | `(problems_followup − problems_T) ≤ −0.10` |
+| **Meaning** | Reported problems/distress **decreased** meaningfully |
+| **Direction** | Lower problems score = better (problems is inverse) |
+
+```
+Example — R2 PASS (total barely moved, problems improved):
+  T:        total = 20, problems_norm = 0.55
+  Follow-up: total = 19, problems_norm = 0.38  → problems delta = −0.17 ✓
+  risk = 0.20, no relapse rules                  ✓
+  → recovery_label = 1 via R2 (even though R1 failed — total only −1)
+```
+
+---
+
+**R3 — Wellbeing subscale improvement**
+
+| | |
+|---|---|
+| **Formula** | `(wellbeing_followup − wellbeing_T) ≥ +0.10` |
+| **Meaning** | General wellbeing **increased** meaningfully |
+| **Direction** | Higher wellbeing = better |
+
+```
+Example — R3 PASS:
+  T:        wellbeing_norm = 0.40
+  Follow-up: wellbeing_norm = 0.52  → delta = +0.12 ✓
+  problems, functioning unchanged; risk = 0.25; no relapse ✓
+  → recovery_label = 1 via R3
+```
+
+---
+
+**R4 — Functioning subscale improvement**
+
+| | |
+|---|---|
+| **Formula** | `(functioning_followup − functioning_T) ≥ +0.10` |
+| **Meaning** | Ability to function in daily life **increased** meaningfully |
+| **Direction** | Higher functioning = better |
+
+```
+Example — R4 PASS:
+  T:        functioning_norm = 0.48
+  Follow-up: functioning_norm = 0.61  → delta = +0.13 ✓
+  → recovery_label = 1 via R4
+```
+
+```
+Example — R4 FAIL (improvement below MCID):
+  T:        functioning_norm = 0.50
+  Follow-up: functioning_norm = 0.57  → delta = +0.07 (< 0.10) ✗
+  → R4 does not fire
+```
+
+---
+
+**Summary — R1–R4 at a glance**
+
+| Rule | What improved | Condition (default MCID) | Example delta that PASSES |
+|------|---------------|--------------------------|---------------------------|
+| **R1** | Total score | Drop ≥ 5 points | 22 → 16 (−6) |
+| **R2** | Problems | Drop ≥ 0.10 norm | 0.55 → 0.38 (−0.17) |
+| **R3** | Wellbeing | Rise ≥ 0.10 norm | 0.40 → 0.52 (+0.12) |
+| **R4** | Functioning | Rise ≥ 0.10 norm | 0.48 → 0.61 (+0.13) |
+
+**Only one rule needs to pass** — they are connected by **OR**, not AND.
+
+#### 2.2.4 Relapse rules L1–L5 — detailed with examples
+
+**Rule:** Relapse is checked **before** recovery. If **any** L1–L5 is true → `relapse_label = 1` and `recovery_label = 0`, regardless of R1–R4.
+
+---
+
+**L1 — Total CORE-OM worsening**
+
+| | |
+|---|---|
+| **Formula** | `(total_followup − total_T) ≥ +5` |
+| **Meaning** | Overall distress increased by at least 5 points |
+
+```
+Example — L1 PASS:
+  T:        total = 15
+  Follow-up: total = 21  → delta = +6 ✓
+  → relapse_label = 1, recovery_label = 0
+```
+
+---
+
+**L2 — Problems subscale worsening**
+
+| | |
+|---|---|
+| **Formula** | `(problems_followup − problems_T) ≥ +0.10` |
+| **Meaning** | Problems/distress **increased** meaningfully |
+
+```
+Example — L2 PASS:
+  T:        problems_norm = 0.30
+  Follow-up: problems_norm = 0.45  → delta = +0.15 ✓
+  → relapse_label = 1
+```
+
+---
+
+**L3 — Risk elevation at follow-up**
+
+| | |
+|---|---|
+| **Formula** | `risk_followup ≥ 0.70` |
+| **Meaning** | Risk subscale is **high** at follow-up — even if total score barely changed |
+
+```
+Example — L3 PASS (critical case — total almost flat):
+  T:        total = 18, risk_norm = 0.25
+  Follow-up: total = 19, risk_norm = 0.72  → total delta +1 (L1 ✗) but risk ≥ 0.70 ✓
+  → relapse_label = 1, recovery_label = 0
+```
+
+This is why **risk guard** exists for recovery: a user cannot be labeled "recovered" while risk ≥ 0.70.
+
+---
+
+**L4 — Risk increase (delta)**
+
+| | |
+|---|---|
+| **Formula** | `(risk_followup − risk_T) ≥ +0.15` |
+| **Meaning** | Risk **rose meaningfully** even if absolute level still below 0.70 |
+
+```
+Example — L4 PASS:
+  T:        risk_norm = 0.20
+  Follow-up: risk_norm = 0.38  → delta = +0.18 ✓
+  → relapse_label = 1
+```
+
+---
+
+**L5 — GAD-7 worsening (secondary — when CORE-OM follow-up absent)**
+
+| | |
+|---|---|
+| **Formula** | `(gad7_followup − gad7_T) ≥ +4` |
+| **When used** | Only when there is **no** CORE-OM in the assessment window but GAD-7 follow-up exists |
+| **Meaning** | Anxiety score increased meaningfully |
+
+```
+Example — L5 PASS (no CORE-OM follow-up):
+  T:        GAD-7 = 8
+  Follow-up: GAD-7 = 13  → delta = +5 ✓
+  No CORE-OM in [T+21, T+45]
+  → relapse_label = 1 (secondary path), recovery_label = 0 or null per GAD-7 rules
+```
+
+---
+
+**Summary — L1–L5 at a glance**
+
+| Rule | What worsened | Condition (default) | Example delta that PASSES |
+|------|---------------|---------------------|---------------------------|
+| **L1** | Total score | Rise ≥ 5 points | 15 → 21 (+6) |
+| **L2** | Problems | Rise ≥ 0.10 norm | 0.30 → 0.45 (+0.15) |
+| **L3** | Risk (absolute) | risk ≥ 0.70 at follow-up | 0.25 → 0.72 |
+| **L4** | Risk (change) | Rise ≥ 0.15 norm | 0.20 → 0.38 (+0.18) |
+| **L5** | GAD-7 | Rise ≥ 4 points *(no CORE-OM F/U)* | 8 → 13 (+5) |
+
+**Only one rule needs to pass** — relapse uses **OR** logic across L1–L5.
+
+#### 2.2.5 How recovery and relapse combine — the three recovery conditions
+
+All three conditions below must be true for `recovery_label = 1`:
 
 | # | Condition | Meaning |
 |---|-----------|---------|
-| 1 | **Improvement detected (R1–R4)** | At least **one** of four rules shows meaningful clinical improvement between T and follow-up (e.g. total score dropped by ≥5 points, or problems subscale improved by ≥0.10) |
-| 2 | **Risk guard passes** | Risk subscale at follow-up is **below 0.70** — we do not call it recovery if risk is elevated |
-| 3 | **Not a relapse** | None of the relapse rules (L1–L5) fired — relapse is checked **first**; if relapse = 1, recovery cannot be 1 |
-
-**When is `recovery_label = null` (not 0)?**
-
-There is **no valid follow-up assessment** in the window T+21 to T+45 (and no valid GAD-7 secondary path). We **do not guess** — the row is excluded from training rather than labeled as “no recovery.”
-
-**When is `recovery_label = 0`?**
-
-Follow-up exists, user is **not** in relapse, but **none** of R1–R4 improvement rules met → clinically **stable**, not improved.
+| 1 | **Improvement detected (R1–R4)** | At least **one** recovery rule shows meaningful clinical improvement between T and follow-up |
+| 2 | **Risk guard passes** | `risk_norm` at follow-up is **below 0.70** |
+| 3 | **Not a relapse** | **None** of L1–L5 fired — relapse was checked first |
 
 ```
 IF no follow-up in [T+21, T+45]:
@@ -190,13 +431,25 @@ ELSE:
     recovery_label = 0               ← stable, no meaningful change
 ```
 
+#### 2.2.6 Label values — what 1, 0, and null mean
+
+| Value | Meaning | When it happens |
+|-------|---------|-----------------|
+| **`1`** | Positive outcome for that label | Recovery: meaningful improvement + guards pass. Relapse: any L1–L5 fired. |
+| **`0`** | Negative outcome **or** stable | Recovery: follow-up exists but no R1–R4 (stable), OR relapse blocked recovery. Relapse: follow-up exists but no L1–L5. |
+| **`null`** | **Unknown / censored** | No valid CORE-OM (or GAD-7 secondary path) in assessment window. **Exclude** from clinical model training — do not treat as 0. |
+
 **Example — label rows in training data:**
 
-| user_id | snapshot_date | core_om_total | recovery_label | Notes |
-|---------|---------------|---------------|----------------|-------|
-| 1001 | 2024-10-01 | 22 | 1 | Total −6 and problems subscale improved (§4.3.5) |
-| 1002 | 2024-10-01 | 18 | 0 | Stable in window — neither recovery nor relapse |
-| 1003 | 2024-10-01 | 25 | null | No follow-up in [T+21, T+45] → censored, exclude from training |
+| user_id | snapshot_date | core_om_total | recovery_label | relapse_label | Rule triggered | Notes |
+|---------|---------------|---------------|----------------|---------------|----------------|-------|
+| 1001 | 2024-10-01 | 22 | 1 | 0 | **R1** (22→16, −6) | Total + problems improved; risk 0.15 |
+| 1002 | 2024-10-01 | 18 | 0 | 0 | — | Stable: follow-up exists, no R1–R4, no L1–L5 |
+| 1003 | 2024-10-01 | 25 | null | null | — | Censored: no follow-up in [T+21, T+45] |
+| 1004 | 2024-10-01 | 18 | 0 | 1 | **L3** (risk 0.72) | Total +1 only; risk elevation → relapse wins |
+| 1005 | 2024-10-01 | 20 | 1 | 0 | **R2** (problems −0.17) | Total flat; problems subscale drove recovery |
+
+*Full rule definitions: [§2.2.3 R1–R4](#223-recovery-rules-r1r4--detailed-with-examples), [§2.2.4 L1–L5](#224-relapse-rules-l1l5--detailed-with-examples). Authoritative spec: [§4.3](#43-clinical-outcome-labels--production-specification).*
 
 ### 2.3 Determinism rule
 
@@ -387,6 +640,8 @@ FUNCTION get_followup_assessment(user_id, snapshot_date, instrument, window):
 
 #### 4.3.5 Recovery label (`recovery_label`)
 
+> **Primer:** For glossary (MCID, subscale, censoring) and worked examples of each rule, see [§2.2.1–§2.2.4](#221-glossary--terms-used-in-label-rules).
+
 **Primary criteria (any ONE required + safety guard):**
 
 | # | Criterion | Formula |
@@ -433,6 +688,8 @@ No CORE-OM or GAD-7 in [T+21, T+45]
 ```
 
 #### 4.3.6 Relapse label (`relapse_label`)
+
+> **Primer:** For detailed L1–L5 examples, see [§2.2.4](#224-relapse-rules-l1l5--detailed-with-examples).
 
 **Evaluated before recovery.** If any criterion true → `relapse_label=1`, `recovery_label=0`.
 
@@ -2114,7 +2371,8 @@ Never null. Measures behavioral disengagement, not clinical change.
 | **Band** | Categorical label (Low/Moderate/High) derived from score range |
 | **Cohort prior** | Default score (50) used during cold start for missing features |
 | **Censored label** | `recovery_label` or `relapse_label` = null when no valid follow-up; row excluded from clinical model training |
-| **MCID** | Minimum Clinically Important Difference — smallest change treated as meaningful |
+| **MCID** | Minimum Clinically Important Difference — smallest change treated as meaningful (e.g. 5 points total, 0.10 subscale). See [§2.2.1](#221-glossary--terms-used-in-label-rules). |
+| **Subscale** | A section of CORE-OM (wellbeing, problems, functioning, risk), normalized 0–1. See [§2.2.2](#222-core-om-structure--four-subscales-and-direction-of-improvement). |
 | **Label version** | Immutable identifier (e.g. `label_v2.0.0`) for audit when thresholds or rules change |
 
 ### Appendix E — Revision history
