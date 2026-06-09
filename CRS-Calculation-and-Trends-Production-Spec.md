@@ -407,7 +407,73 @@ Example — L5 PASS (no CORE-OM follow-up):
 
 **Only one rule needs to pass** — relapse uses **OR** logic across L1–L5.
 
-#### 2.2.5 How recovery and relapse combine — the three recovery conditions
+##### How to get L1–L5 — step by step
+
+L1–L5 are **not** L2 feature columns and **not** ML model inputs. They are **offline label rules** computed by comparing two assessments: **baseline at snapshot T** and **follow-up in [T+21, T+45]**.
+
+```
+Step 1: Fix snapshot date T (training row date)
+Step 2: Load baseline CORE-OM on or before T
+Step 3: Load follow-up CORE-OM nearest to T+30 within [T+21, T+45]
+Step 4: For each rule L1–L4, compare baseline vs follow-up fields (see table below)
+Step 5: L5 only if Step 3 found NO CORE-OM follow-up — then use GAD-7 baseline + follow-up instead
+Step 6: IF any L1–L5 is true → relapse_label = 1, else relapse_label = 0
+        IF no follow-up at all (and no L5 path) → relapse_label = null
+```
+
+##### L1–L5 → data fields mapping
+
+| Rule | Instrument | Field at **T** (baseline) | Field at **follow-up** | Score type | L0 event path | Related L2 column *(for ML features only)* |
+|------|------------|---------------------------|------------------------|------------|---------------|---------------------------------------------|
+| **L1** | CORE-OM | `payload.total_score` | `payload.total_score` | **Raw points** | `assessment_completed` | `core_om_score` / total normalized |
+| **L2** | CORE-OM | `payload.subscales.problems.normalized` | `payload.subscales.problems.normalized` | **0–1 normalized** | `assessment_completed` | `core_om_problems` |
+| **L3** | CORE-OM | *(not used — absolute at follow-up only)* | `payload.subscales.risk.normalized` | **0–1 normalized** | `assessment_completed` | `core_om_risk` |
+| **L4** | CORE-OM | `payload.subscales.risk.normalized` | `payload.subscales.risk.normalized` | **0–1 normalized** (delta) | `assessment_completed` | `core_om_risk` |
+| **L5** | GAD-7 | `payload.total_score` | `payload.total_score` | **Raw points (0–21)** | `assessment_completed` | `gad7_normalized_latest` *(normalized; label rule uses raw)* |
+
+**Important distinctions:**
+
+| Question | Answer |
+|----------|--------|
+| Are L1–L5 the same as L2 features? | **No.** L2 columns are **latest value on snapshot day** for model training features. L1–L5 compare **T vs follow-up** for label generation only. |
+| Does `core_om_delta_30d` compute L1? | **No.** `core_om_delta_30d` is an L2 feature (total normalized change over 30 days). L1 uses **raw total_score** from two assessment events with MCID = 5. |
+| Which subscales are NOT used in L1–L5? | **Wellbeing** and **functioning** — they appear in recovery rules R3/R4 only, not relapse. |
+| When does L5 run? | Only when there is **no** CORE-OM follow-up in [T+21, T+45] but GAD-7 follow-up exists. |
+
+**Worked example — computing all L rules for one user:**
+
+```
+Snapshot T = 2024-10-01
+
+Baseline CORE-OM (2024-10-01):
+  total_score = 18
+  subscales.problems.normalized = 0.30
+  subscales.risk.normalized = 0.25
+
+Follow-up CORE-OM (2024-10-31):
+  total_score = 19
+  subscales.problems.normalized = 0.45
+  subscales.risk.normalized = 0.72
+
+L1: 19 − 18 = +1        → FAIL (need ≥ +5)
+L2: 0.45 − 0.30 = +0.15 → PASS (≥ +0.10)
+L3: risk = 0.72         → PASS (≥ 0.70)
+L4: 0.72 − 0.25 = +0.47 → PASS (≥ +0.15)
+
+→ relapse_label = 1 (L2, L3, and L4 all pass — only one needed)
+→ recovery_label = 0 (relapse checked first)
+```
+
+**Where this runs in the pipeline:**
+
+| Stage | What happens |
+|-------|----------------|
+| **L0** | User completes CORE-OM / GAD-7 → `assessment_completed` event stored in `raw` |
+| **Label job** (offline) | Pairs assessments at T and follow-up → evaluates L1–L5 → writes `relapse_label` to `ml.training_labels` |
+| **L2** | Copies **latest** assessment values into feature row (separate purpose) |
+| **L4 ML** | Trains relapse model using L2 features; **target** = `relapse_label` from label job |
+
+See also: [§4.3.6](#436-relapse-label-relapse_label), [Appendix B.1 Decision tree B](#decision-tree-a--clinical-labels-recovery_label-relapse_label).
 
 All three conditions below must be true for `recovery_label = 1`:
 
