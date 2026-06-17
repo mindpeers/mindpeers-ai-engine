@@ -49,7 +49,8 @@ Single entry point for all production specifications, implementation artifacts, 
 | **L0** | [Data-Ingestion-Layer-Production-Spec.md](./Data-Ingestion-Layer-Production-Spec.md) | Production spec | Raw events, staging rollups |
 | **L2** | [L2-Feature-Store-Production-Spec.md](./L2-Feature-Store-Production-Spec.md) | Production spec | 34-column feature row, flags, meta |
 | **L2 (POC)** | [ENGINE-POC-COMPLETE-DOCUMENTATION.md](./ENGINE-POC-COMPLETE-DOCUMENTATION.md) Part 4 | POC closed | Registry reference |
-| **L3** | [CRS-Calculation-and-Trends-Production-Spec.md](./CRS-Calculation-and-Trends-Production-Spec.md) | Production spec (CRS v2) | CRS, pillars, 7 trends; [Appendix B.1 label decision tree](./CRS-Calculation-and-Trends-Production-Spec.md#appendix-b1--clinical-label-decision-tree-for-sign-off) |
+| **L3** | [CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md](./CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md) | **Unified production spec (v3)** — CRS v2 + Engine Part1 + labels + trends | CRS, pillars, narrative, risk cap |
+| **L3 (v2 ref)** | [CRS-Calculation-and-Trends-Production-Spec.md](./CRS-Calculation-and-Trends-Production-Spec.md) | Reference (v2 only) | ML labels, trends without Part1 integration |
 | **L3 v1** | ENGINE-POC Part 5 | POC closed | Rule-based CRS (25% pillars) |
 | **L1** | ENGINE-POC Part 6–7 | POC closed | Snapshot API, patterns |
 | **Program** | ENGINE-POC (full) | Consolidated | Gaps G1–G15, roadmap |
@@ -145,7 +146,8 @@ python scripts/validate_dataset_columns.py Engine-POC-Sample-Dataset.xlsx
 | `Engine Document.docx` | PRD |
 | `Contextuliazation.xlsx` | Pillar / trend input map |
 | `Data contexualization Datasets.xlsx` | Dataset column definitions |
-| `CRS Calculation with trends.docx` | CRS v2 + trend framework source |
+| `Engine Part1.docx` | Pillar input catalog, category weights, product screens |
+| `CRS Calculation with trends.docx` | CRS v2 + trend framework |
 
 ---
 
@@ -153,5 +155,6 @@ python scripts/validate_dataset_columns.py Engine-POC-Sample-Dataset.xlsx
 
 | Date | Change |
 |------|--------|
+| 2026-06-05 | Added CRS Unified v3 spec (Engine Part1 + CRS v2 + labels) |
 | 2026-06-05 | Added L0 + L2 production specs, schemas, ingestion/features stubs |
 | 2026-05-20 | ENGINE-POC consolidated doc (L1–L3 POC) |

@@ -1,12 +1,36 @@
-# Cognitive Readiness Score (CRS) & Trend Metrics — Production Specification
+# Cognitive Readiness Score (CRS) & Trend Metrics — Unified Production Specification
 
-**Version:** 2.0.0  
-**Status:** Production-ready specification (clinical labels v2)  
-**Superseded by:** [CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md](./CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md) for full product + engineering integration  
-**Source artifacts:** `CRS Calculation with trends.docx`, `CRS Calculation.docx`, `ENGINE-POC-COMPLETE-DOCUMENTATION.md`  
-**Related layers:** [L2-Feature-Store-Production-Spec.md](./L2-Feature-Store-Production-Spec.md), [Data-Ingestion-Layer-Production-Spec.md](./Data-Ingestion-Layer-Production-Spec.md)  
-**Audience:** Engineering, ML, Product, Clinical  
+**Version:** 3.0.0 (Unified)  
+**Status:** Production-ready — integrates CRS v2 ML pipeline + Engine Part1 product model + clinical labels v2  
+**Supersedes:** [CRS-Calculation-and-Trends-Production-Spec.md](./CRS-Calculation-and-Trends-Production-Spec.md) v2.0.0 (retained as reference)  
+**Source artifacts:**
+
+| Artifact | Role in this spec |
+|----------|-------------------|
+| `CRS Calculation with trends.docx` | CRS v2 formula, 7 trend metrics |
+| `CRS Calculation.docx` | Original CRS framework |
+| `Engine Part1.docx` | Pillar definitions, input catalogs, 5-category weights, product screens |
+| `ENGINE-POC-COMPLETE-DOCUMENTATION.md` | L1–L3 POC, feature registry |
+| [L2-Feature-Store-Production-Spec.md](./L2-Feature-Store-Production-Spec.md) | 34-column feature row |
+| [Data-Ingestion-Layer-Production-Spec.md](./Data-Ingestion-Layer-Production-Spec.md) | L0 events, label sources |
+
+**Related layers:** L0 Ingestion → L2 Feature Store → L4 ML (labels + models) → L3 Scoring → L1 Engine  
+**Audience:** Engineering, ML, Product, Clinical, Design  
 **Last updated:** 2026-06-05
+
+---
+
+## Document map — what this unified spec covers
+
+| Layer | Question answered | Primary sections |
+|-------|-------------------|------------------|
+| **Product narrative** | Why am I here? What should I do? | §1.5, §10.4 |
+| **State (pillars)** | Where am I right now? | §7, Appendix F |
+| **Trajectory (CRS v2)** | Where am I heading? | §5, §6 |
+| **Trends** | Which direction per domain? | §8 |
+| **Risk & safety** | What is the risk? | §4.3, §7.7, §11.4 |
+| **Data & labels** | How are scores grounded? | §4, Appendix B |
+| **API & UX** | What does the client receive? | §10 |
 
 ---
 
@@ -14,20 +38,20 @@
 
 1. [Executive summary](#1-executive-summary)
 2. [Design philosophy](#2-design-philosophy)
-3. [The two-layer model: state vs trajectory](#3-the-two-layer-model-state-vs-trajectory)
+3. [The three-layer model: state, trajectory, narrative](#3-the-three-layer-model-state-trajectory-narrative)
 4. [Data foundation: snapshots, features, and labels](#4-data-foundation-snapshots-features-and-labels)
 5. [Outcome prediction models (L4 ML layer)](#5-outcome-prediction-models-l4-ml-layer)
-6. [CRS calculation — composite of future probabilities](#6-crs-calculation--composite-of-future-probabilities)
-7. [Secondary pillar scores (state layer)](#7-secondary-pillar-scores-state-layer)
+6. [CRS calculation — dual model (ML v2 + rule-based readiness)](#6-crs-calculation--dual-model-ml-v2--rule-based-readiness)
+7. [Pillar scores (state layer) — Engine Part1 model](#7-pillar-scores-state-layer--engine-part1-model)
 8. [Trend metrics (trajectory layer)](#8-trend-metrics-trajectory-layer)
 9. [End-to-end architecture](#9-end-to-end-architecture)
 10. [API contracts and response examples](#10-api-contracts-and-response-examples)
-11. [Normalization, bands, and direction](#11-normalization-bands-and-direction)
+11. [Normalization, bands, direction, and risk caps](#11-normalization-bands-direction-and-risk-caps)
 12. [Explainability (SHAP) and driver attribution](#12-explainability-shap-and-driver-attribution)
 13. [Data maturity, cold start, and confidence](#13-data-maturity-cold-start-and-confidence)
 14. [Versioning, monitoring, and governance](#14-versioning-monitoring-and-governance)
-15. [Migration path from rule-based v1](#15-migration-path-from-rule-based-v1)
-16. [Appendices](#16-appendices)
+15. [Migration and score coexistence](#15-migration-and-score-coexistence)
+16. [Appendices](#16-appendices) — includes [F: Part1 input registry](#appendix-f--engine-part1-input-registry), [G: Screen lineage](#appendix-g--screen--l0--l2-lineage)
 
 ---
 
@@ -114,6 +138,53 @@ A user can have high Clarity (80) but negative Motivation Momentum (−25). That
 ```
 
 **Clinical interpretation:** Strong current state and high CRS, but Motivation Momentum is declining — recommend proactive engagement intervention before dropout risk materializes.
+
+### 1.5 Five questions the report must answer (Engine Part1)
+
+Every engine report — API, dashboard, or therapist view — must support these user-facing questions:
+
+| # | Question | Primary data source | CRS unified section |
+|---|----------|---------------------|---------------------|
+| 1 | **Where am I right now?** | 4 pillar scores + bands | §7 pillars, API `pillars` |
+| 2 | **Why am I here?** | Top drivers by input category | §12 SHAP + §10.4 `narrative.why` |
+| 3 | **What should I be aware of?** | Declining trends, volatility flags | §8 trends, API `trends`, `awareness_flags` |
+| 4 | **What is the risk?** | P(relapse), CORE-OM risk, escalation | §4.3, §7.7, API `risk` |
+| 5 | **What should I do next?** | L1 patterns + pillar-specific actions | §10.4 `narrative.next_actions` |
+
+**Copy rule:** Scores describe *readiness and trajectory* — never diagnosis. Use "may be influenced by" not "caused by."
+
+### 1.6 Product surfaces → data pipeline (Engine Part1)
+
+| Product screen | User actions | L0 events | L2 / scoring use |
+|----------------|-------------|-----------|-------------------|
+| **Daily Check-in** | Mood, motivation, confidence | `mood_checkin`, `motivation_checkin`, `confidence_checkin` | Emotional Balance, Capacity, trends |
+| **Assessment** | CORE-OM, GAD-7, PHQ-9, trauma | `assessment_completed` | All pillars, labels §4.3, risk cap §7.7 |
+| **Lifestyle Tracker** | Sleep, fatigue, HRV, pulse, exercise, nutrition, hydration | `sleep_session`, `heart_rate_daily`, lifestyle events | CRS readiness, Clarity, Resilience, Capacity |
+| **Games** | Memory Game, Connect Four, Whack A Mole | `game_session_completed` (v1.1) | Clarity, Emotional Balance |
+| **Journaling** | Blank Slate, Letter to Self, Gratitude | `journal_entry`, `journal_features_computed` | Emotional Balance, Resilience |
+| **Forms / Intake** | Therapy intent, concerns, burnout patterns | `intake_form_submitted` (v1.1) | All pillars — Forms category 15–20% |
+| **Therapy / Sessions** | Book, attend, cancel sessions | `session_attended`, `session_missed` | Capacity, dropout label, Therapist category |
+| **Biomarkers** | Cortisol, TSH, blood sugar, Vit D, HbA1c | `biomarker_result` (v1.1) | Lifestyle+Biomarker category 20–30% |
+
+Full lineage: [Appendix G — Screen → L0 → L2 lineage](#appendix-g--screen--l0--l2-lineage).
+
+### 1.7 Unified score stack (v3)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  NARRATIVE LAYER     Why / Aware / Risk / Next (§1.5, §10.4)   │
+├─────────────────────────────────────────────────────────────────┤
+│  TRAJECTORY          CRS v2 (ML) + 7 trend metrics (§6, §8)    │
+├─────────────────────────────────────────────────────────────────┤
+│  STATE               4 pillars — Part1 category weights (§7)  │
+├─────────────────────────────────────────────────────────────────┤
+│  DATA                L0 → L2 features + offline labels (§4)   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**CRS headline (production):** `cognitive_readiness_score` = CRS v2 ML composite (§6.1) after model maturity.  
+**CRS readiness (same-day):** `crs_readiness_score` = Part1 rule-based blend (§6.6) — cold start + explainability.  
+**Display rule:** Apply risk cap (§7.7) to **both** before user-facing output.
 
 ---
 
@@ -525,20 +596,41 @@ Same inputs + same `score_version` + same model versions → **identical outputs
 - Batch pipeline and API must use the same scoring code path.
 - LLM/chat layer **must read** precomputed scores — never invent numbers.
 
+### 2.4 Unified architecture — three score types coexist
+
+| Score type | Formula family | Purpose | When primary |
+|------------|---------------|---------|--------------|
+| **CRS v2 (ML)** | 0.4×P(recovery) + 0.2×(1−P(dropout)) + … | Predict future trajectory | `days_active > 30`, models mature |
+| **CRS readiness (Part1)** | 5-category weighted inputs (§6.6) | Same-day mental readiness | Cold start, explainability fallback |
+| **Pillar scores (Part1)** | Per-pillar category weights (§7.6) | "Where am I right now?" state | Always on dashboard |
+| **Trend metrics** | 7 trajectory composites (§8) | Direction of change | Always alongside state |
+
+**Do not merge** Part1 category weights into CRS v2 probability formula — they answer different questions (today vs future).
+
 ---
 
-## 3. The two-layer model: state vs trajectory
+## 3. The three-layer model: state, trajectory, narrative
 
-### 3.1 State layer — "Where am I now?"
+### 3.0 Layer overview
 
-Four pillar scores (0–100 each):
+| Layer | Engine Part1 question | Output |
+|-------|----------------------|--------|
+| **State** | Where am I right now? | 4 pillars (0–100 each) |
+| **Trajectory** | Where am I heading? | CRS v2 + 7 trends |
+| **Narrative** | Why / Aware / Risk / Next? | API text blocks §10.4 |
 
-| Pillar | Domain focus | Primary question |
-|--------|-------------|------------------|
-| **Clarity** | Cognitive functioning | Can the user think clearly and organize daily life? |
-| **Emotional Balance** | Emotional regulation | Are emotions stable and within a healthy range? |
-| **Resilience** | Recovery & persistence | Can the user bounce back from setbacks? |
-| **Capacity** | Behavioral bandwidth | Does the user have energy and engagement to act? |
+### 3.1 State layer — "Where am I right now?"
+
+Four pillar scores (0–100 each) — meanings from **Engine Part1.docx**:
+
+| Pillar | Meaning (product) | Primary question |
+|--------|-------------------|------------------|
+| **Clarity** | Mental sharpness, focus, attention, recall, cognitive organisation | Can the user think clearly and organise daily life? |
+| **Emotional Balance** | Emotional steadiness, distress load, mood volatility, regulation | Are emotions stable and within a healthy range? |
+| **Resilience** | Recovery capacity, adaptability, coping strength, bounce-back from stress | Can the user recover from setbacks? |
+| **Capacity** | Available functional bandwidth — work, relationships, routine, daily demands | Does the user have energy and engagement to act? |
+
+**CRS (Cognitive Readiness Score)** — overall mental readiness: how prepared the user is to think, regulate, perform, and sustain daily demands. Combines biological, behavioural, and assessment signals (§6).
 
 ### 3.2 Trajectory layer — "Where am I heading?"
 
@@ -585,6 +677,19 @@ CRS = 52
 ```
 
 *Action:* Support recovery momentum; avoid alarmist messaging — trajectory is positive even though current state is low.
+
+### 3.4 Narrative layer — "Why / Aware / Risk / Next?" (Engine Part1)
+
+The narrative layer translates scores into actionable copy. Generated by L1 pattern engine using L3 snapshot inputs.
+
+| Narrative block | Inputs | Example output |
+|-----------------|--------|----------------|
+| `why_summary` | Top 3 SHAP drivers mapped to category (Assessment / Lifestyle / Tools / Forms / Therapist) | "Your score is influenced by improved sleep and lower anxiety on your last assessment." |
+| `awareness_flags` | Trends with `direction_7d = declining` or volatility flags | "Motivation has declined 18% over 7 days." |
+| `risk_summary` | `relapse_probability`, `core_om_risk`, risk cap status | "Risk indicators are elevated — consider reaching out to your therapist." |
+| `next_actions` | L1 pattern matches | ["Complete today's check-in", "Review sleep consistency tips"] |
+
+Spec: §10.4 API fields. Must respect risk cap — suppress positive readiness copy when `risk_elevated = true`.
 
 ---
 
@@ -1151,9 +1256,11 @@ Target: relapse_label per §4.3 (subscale, risk, GAD-7 confirmers)
 
 ---
 
-## 6. CRS calculation — composite of future probabilities
+## 6. CRS calculation — dual model (ML v2 + rule-based readiness)
 
-### 6.1 Formula
+CRS v3 exposes **two complementary CRS computations**. Production headline uses v2 when available; readiness score always computed for explainability and cold start.
+
+### 6.1 CRS v2 — ML composite (primary at maturity)
 
 CRS is a **weighted linear composite** of four outcome-derived terms:
 
@@ -1280,11 +1387,43 @@ def compute_crs(
     return round(crs, 1)
 ```
 
+### 6.6 CRS readiness — rule-based same-day score (Engine Part1)
+
+When ML models are immature or for explainability, compute **`crs_readiness_score`** from five input categories. Source: **Engine Part1.docx** Table 6.
+
+**Category weights (CRS readiness):**
+
+| Input category | Weight | Parameters (normalized 0–100 per parameter, equal weight within block) |
+|----------------|--------|------------------------------------------------------------------------|
+| **Assessment** | 30% | CORE-OM overall, functioning, problems, wellbeing, risk, anxiety, depression, trauma |
+| **Lifestyle + Biomarker** | 30% | Sleep, fatigue, HRV, pulse, cortisol, blood sugar, thyroid/TSH, hydration, nutrition |
+| **Tools / Behavioural** | 15% | Mood, motivation check-in, Memory Game, Connect Four, app engagement |
+| **Forms** | 15% | Therapy intent, primary concern, work-stress pattern, routine disruption, check-in completion |
+| **Therapist / Session** | 10% | Session attendance, therapist inputs (see therapist sheet) |
+
+**Formula:**
+
+```
+block_score = mean(normalized parameters in block that are non-null)
+crs_readiness = 0.30×Assessment + 0.30×Lifestyle + 0.15×Tools + 0.15×Forms + 0.10×Therapist
+                (renormalize weights if a block has no data)
+```
+
+**v3 display selection:**
+
+| Condition | `cognitive_readiness_score` (headline) | Also expose |
+|-----------|----------------------------------------|-------------|
+| `data_maturity_stage = full` AND models loaded | CRS v2 (§6.1) | `crs_readiness_score`, `crs_v2_score` |
+| Cold start / early | `crs_readiness_score` | `crs_v2_score = null` |
+| Shadow period | Both | `crs_primary` field indicates which is headline |
+
+Apply **risk cap (§7.7)** to both scores before API output.
+
 ---
 
-## 7. Secondary pillar scores (state layer)
+## 7. Pillar scores (state layer) — Engine Part1 model
 
-Pillar scores represent **current state** and are derived from domain-specific models or deterministic formulas. They feed the dashboard "Where am I now?" section and complement (but do not replace) the ML-based CRS.
+Pillar scores represent **current state** ("Where am I right now?"). Engine Part1 defines **five input categories** per pillar with explicit weights. v3 uses Part1 category model as **canonical rule-based approach**; ML pillar models are optional enhancements (§7.1).
 
 ### 7.1 Pillar overview
 
@@ -1421,6 +1560,78 @@ Clarity = 0.30 × norm(sleep_avg_7d)
 | **Clarity** | | | | **73.0 → 73** |
 
 **Future:** When CogniArt and journal features are available, promote to ML model trained on therapist-rated clarity or functioning subscale changes.
+
+### 7.6 Five-category weight model per pillar (Engine Part1)
+
+Each pillar score = weighted sum of **five blocks**. Within each block, parameters are normalized 0–100 and averaged (missing parameters excluded; block weight renormalized).
+
+**Clarity (Engine Part1 Table 7):**
+
+| Category | Weight | Key parameters |
+|----------|--------|----------------|
+| Tools / Behavioural | 30% | Memory Game, Connect Four, focus behaviour, completion patterns |
+| Lifestyle + Biomarker | 25% | Sleep, fatigue, hydration, nutrition, HRV, pulse, blood sugar, thyroid, Vitamin D |
+| Assessment | 20% | CORE-OM functioning, problems, anxiety, ADHD if available |
+| Forms | 15% | Overthinking, decision fatigue, brain fog, work pressure |
+| Therapist / Session | 10% | Therapist sheet inputs |
+
+**Emotional Balance (Table 8):** Assessment 35%, Forms 20%, Tools 20%, Lifestyle 20%, Therapist 5%
+
+**Resilience (Table 9):** Lifestyle 30%, Assessment 25%, Forms 20%, Tools 15%, Therapist 10%
+
+**Capacity (Table 10):** Assessment 30%, Lifestyle 30%, Forms 20%, Therapist 10%, Tools 10%
+
+**Pillar formula (generic):**
+
+```
+PillarScore = Σ (category_weight × block_mean_score)
+            → apply risk cap §7.7
+            → round to integer 0–100
+```
+
+Full parameter lists: [Appendix F — Engine Part1 input registry](#appendix-f--engine-part1-input-registry).
+
+### 7.7 CORE-OM risk cap and override rules (Engine Part1)
+
+Engine Part1: *"CORE-OM Risk Score should act as a cap/override if elevated."* Applied to **all user-facing scores** before API response.
+
+| Condition | Action |
+|-----------|--------|
+| `core_om_risk >= 0.70` | Set `risk_elevated = true`; cap CRS and all pillars at **max 40** (configurable `RISK_CAP_CEILING`) |
+| `core_om_risk >= 0.70` | Force `risk_band = "Elevated"`; trigger L1 Risk Watch pattern |
+| `core_om_risk >= 0.70` | Suppress positive readiness copy in narrative §10.4 |
+| `core_om_risk` increased ≥ 0.15 in 30d | Add `awareness_flags`: "Risk indicators have increased" |
+| Relapse label L3/L4 would fire | Same cap behaviour at inference time when risk subscale high |
+
+**Pseudocode:**
+
+```
+FUNCTION apply_risk_cap(scores, core_om_risk, ceiling=40):
+  IF core_om_risk >= 0.70:
+    scores.crs = MIN(scores.crs, ceiling)
+    scores.clarity = MIN(scores.clarity, ceiling)
+    scores.emotional_balance = MIN(scores.emotional_balance, ceiling)
+    scores.resilience = MIN(scores.resilience, ceiling)
+    scores.capacity = MIN(scores.capacity, ceiling)
+    scores.risk_elevated = true
+  RETURN scores
+```
+
+Clinical sign-off required for `RISK_CAP_CEILING` and escalation workflow.
+
+### 7.8 Input availability matrix (v1 / v1.1 / future)
+
+| Parameter group | v1 (L2 today) | v1.1 (ingestion backlog) | Future |
+|-----------------|---------------|--------------------------|--------|
+| CORE-OM subscales + GAD-7 | Yes | — | PHQ-9, trauma scores |
+| Sleep, HRV, mood, engagement | Yes | fatigue, pulse | — |
+| Games (Memory, Connect Four) | — | Yes | Whack A Mole |
+| Journaling NLP | — | Partial | Full tone/themes |
+| Forms / intake | — | Yes | — |
+| Biomarkers (cortisol, TSH, etc.) | — | Yes | — |
+| Therapist sheet params | Partial (attendance) | Full sheet sync | — |
+
+When v1.1 parameters are missing, block weights renormalize over available parameters — same as L2 cold-start policy §13.
 
 ---
 
@@ -1844,19 +2055,32 @@ Recovery Readiness = 85, Stress Load = 28, ...
   "user_id": "1001",
   "as_of_date": "2025-01-15",
   "computed_at": "2025-01-15T03:05:00Z",
-  "score_version": "crs_v2.0.0",
+  "score_version": "crs_v3.0.0",
   "model_bundle_version": "outcome_models_v1.2.0",
   "confidence_tier": "High",
   "data_maturity_stage": "full",
+  "crs_primary": "v2",
 
   "cognitive_readiness_score": 81.2,
+  "crs_v2_score": 81.2,
+  "crs_readiness_score": 74.5,
   "crs_band": "High",
+  "risk_elevated": false,
 
   "pillars": {
     "clarity_score": 73,
+    "clarity_meaning": "Mental sharpness, focus, and cognitive organisation",
     "emotional_balance_score": 69,
+    "emotional_balance_meaning": "Emotional steadiness and regulation",
     "resilience_score": 68,
-    "capacity_score": 59
+    "resilience_meaning": "Recovery capacity and adaptability",
+    "capacity_score": 59,
+    "capacity_meaning": "Functional bandwidth for daily demands"
+  },
+
+  "pillar_category_breakdown": {
+    "clarity": { "tools_pct": 32, "lifestyle_pct": 28, "assessment_pct": 22, "forms_pct": 12, "therapist_pct": 6 },
+    "emotional_balance": { "assessment_pct": 38, "forms_pct": 18, "tools_pct": 20, "lifestyle_pct": 19, "therapist_pct": 5 }
   },
 
   "outcome_probabilities": {
@@ -2000,9 +2224,68 @@ Recovery Readiness = 85, Stress Load = 28, ...
 }
 ```
 
+### 10.4 Narrative fields — five report questions (Engine Part1)
+
+Maps §1.5 product questions to API fields. Generated by L1 pattern + L3 driver service. **Never invent scores** — narrative references precomputed snapshot only.
+
+```json
+{
+  "narrative": {
+    "where_now": "Your readiness is High (81). Emotional Balance and Resilience are moderate; Capacity is your lowest pillar today.",
+    "why_summary": "This is influenced by strong recovery probability (82%), consistent sleep, and improved CORE-OM problems score.",
+    "awareness_flags": [
+      { "severity": "warning", "text": "Motivation Momentum declined 15 points in 7 days." },
+      { "severity": "info", "text": "Capacity is below your 30-day average." }
+    ],
+    "risk": {
+      "risk_elevated": false,
+      "core_om_risk": 0.15,
+      "relapse_probability": 0.15,
+      "summary": "Clinical risk indicators are within normal range.",
+      "escalation_recommended": false
+    },
+    "next_actions": [
+      { "action_id": "complete_checkin", "label": "Complete today's check-in", "priority": 1 },
+      { "action_id": "review_sleep", "label": "Review sleep consistency tips", "priority": 2 }
+    ]
+  },
+  "score_meanings": {
+    "cognitive_readiness_score": "Overall mental readiness — prepared to think, regulate, perform, and sustain daily demands",
+    "clarity_score": "Mental sharpness, focus, attention, recall, cognitive organisation",
+    "emotional_balance_score": "Emotional steadiness, distress load, mood volatility, regulation",
+    "resilience_score": "Recovery capacity, adaptability, coping strength",
+    "capacity_score": "Available functional bandwidth for work, relationships, and routine"
+  }
+}
+```
+
+**Risk-elevated narrative override** (`core_om_risk >= 0.70`):
+
+```json
+{
+  "narrative": {
+    "where_now": "Your scores are capped while risk indicators are elevated.",
+    "why_summary": "CORE-OM risk subscale is elevated. Please speak with your therapist or support team.",
+    "awareness_flags": [{ "severity": "critical", "text": "Risk indicators require attention." }],
+    "risk": { "risk_elevated": true, "escalation_recommended": true },
+    "next_actions": [{ "action_id": "contact_support", "label": "Contact your therapist", "priority": 1 }]
+  }
+}
+```
+
+**Driver category mapping (for `why_summary`):**
+
+| SHAP domain | Engine Part1 category |
+|-------------|----------------------|
+| biological | Lifestyle + Biomarker |
+| behavioral | Tools / Behavioural |
+| psychological | Assessment + Forms |
+| clinical | Assessment |
+| therapy | Therapist / Session |
+
 ---
 
-## 11. Normalization, bands, and direction
+## 11. Normalization, bands, direction, and risk caps
 
 ### 11.1 Feature normalization patterns
 
@@ -2046,6 +2329,25 @@ def compute_direction(score_now, score_7d_ago, threshold=3):
 | Stress Load | 28 | 35 | −7 | declining ↓ (good — stress decreasing) |
 | Energy Rhythm | 55 | 53 | +2 | stable → |
 | Motivation Momentum | 38 | 53 | −15 | declining ↓ |
+
+### 11.4 Risk cap normalization (Engine Part1)
+
+After all scores computed, apply §7.7 before band assignment:
+
+```
+1. Compute crs_v2, crs_readiness, pillars (uncapped)
+2. IF core_om_risk >= RISK_THRESHOLD (0.70):
+     cap all display scores at RISK_CAP_CEILING (40)
+     set risk_elevated = true
+     override crs_band to "Low" for display
+3. Assign bands from capped scores
+4. Generate narrative §10.4 with risk override if elevated
+```
+
+| Config key | Default | Owner |
+|------------|---------|-------|
+| `RISK_THRESHOLD` | 0.70 | Clinical |
+| `RISK_CAP_CEILING` | 40 | Clinical + Product |
 
 ---
 
@@ -2168,49 +2470,64 @@ Footnote: "Based on sleep and mood signals."
 
 ---
 
-## 15. Migration path from rule-based v1
+## 15. Migration and score coexistence
 
-The existing POC specification (`ENGINE-POC-COMPLETE-DOCUMENTATION.md`) defines a **rule-based CRS**:
+v3 unified spec supports **three coexisting CRS formulations** plus Part1 pillars. Migration is additive — do not deprecate pillars when promoting CRS v2.
 
-```
-CRS_v1 = 0.25 × Clarity + 0.25 × Emotional_Balance + 0.25 × Resilience + 0.25 × Capacity
-```
+### 15.1 Score comparison matrix
 
-This document defines **CRS v2** as an ML-composite. Both can coexist during migration.
+| Score | Formula | Source doc | Primary use |
+|-------|---------|------------|-------------|
+| **CRS v2 (ML)** | 0.4×P(recovery) + 0.2×(1−P(dropout)) + … | CRS trends doc | Headline trajectory score |
+| **CRS readiness (Part1)** | 5-category weighted inputs §6.6 | Engine Part1 | Same-day readiness, cold start |
+| **CRS v1 (POC)** | 0.25 × (Clarity + Balance + Resilience + Capacity) | ENGINE-POC | Legacy — replace with Part1 pillars |
+| **Pillars (Part1)** | Per-pillar category weights §7.6 | Engine Part1 | State layer — always shown |
 
-### 15.1 Comparison
+### 15.2 Comparison — CRS v2 vs CRS readiness vs pillars
 
-| Aspect | CRS v1 (rule-based) | CRS v2 (ML-composite) |
-|--------|--------------------|-----------------------|
-| Formula | Weighted pillar average | Weighted outcome probabilities |
-| Training required | No | Yes (4 outcome models) |
-| Interpretability | Pillar-level | Outcome-level (recovery, retention, etc.) |
-| Predictive power | Descriptive (current state) | Predictive (future trajectory) |
-| Labels needed | None | 4 binary outcome labels |
-| Cold start | Works immediately | Requires model maturity |
+| Aspect | CRS v2 (ML) | CRS readiness (Part1) | Pillars (Part1) |
+|--------|-------------|----------------------|-----------------|
+| Question | Where am I **heading**? | How ready am I **today**? | How am I in each **domain**? |
+| Inputs | L2 features → ML models | 5 categories, 30+ parameters | 5 categories per pillar |
+| Training | Yes (4 outcome labels) | No | Optional ML later |
+| Cold start | Cohort prior / unavailable | Always computable | Always computable |
+| Risk cap | Yes §7.7 | Yes §7.7 | Yes §7.7 |
 
-### 15.2 Recommended migration phases
+### 15.3 Recommended migration phases (v3)
 
 | Phase | Timeline | Action |
 |-------|----------|--------|
-| **Phase 1** | Weeks 1–4 | Ship v1 rule-based CRS + trend metrics (deterministic) |
-| **Phase 2** | Weeks 5–8 | Train outcome models on historical snapshots; validate AUC |
-| **Phase 3** | Weeks 9–10 | Shadow-mode v2 CRS alongside v1; compare distributions |
-| **Phase 4** | Week 11+ | Switch primary CRS to v2; keep v1 pillars as state layer |
-| **Phase 5** | Ongoing | Promote pillar scores to ML as labels become available |
+| **Phase 1** | Weeks 1–4 | Ship Part1 pillar scores (§7.6) + CRS readiness (§6.6) + trends |
+| **Phase 2** | Weeks 5–8 | Train CRS v2 outcome models; label job §4.3 |
+| **Phase 3** | Weeks 9–10 | Shadow CRS v2 alongside readiness; narrative §10.4 |
+| **Phase 4** | Week 11+ | `crs_primary = v2` when mature; keep readiness + pillars |
+| **Phase 5** | Ongoing | Ingest v1.1 inputs (Appendix F/G); expand pillar blocks |
 
-### 15.3 Dual-score period example
-
-During Phase 3, snapshot includes both:
+### 15.4 Dual/triple-score API example
 
 ```json
 {
-  "cognitive_readiness_score_v1": 71,
-  "cognitive_readiness_score_v2": 81.2,
+  "score_version": "crs_v3.0.0",
   "crs_primary": "v2",
-  "score_version": "crs_v2.0.0"
+  "cognitive_readiness_score": 81.2,
+  "crs_v2_score": 81.2,
+  "crs_readiness_score": 74.5,
+  "crs_v1_legacy_score": null,
+  "risk_elevated": false,
+  "pillars": {
+    "clarity_score": 73,
+    "emotional_balance_score": 69,
+    "resilience_score": 68,
+    "capacity_score": 59
+  }
 }
 ```
+
+During Phase 3, clients may show both CRS v2 and readiness with footnote explaining difference (trajectory vs today).
+
+### 15.5 Legacy POC reference
+
+ENGINE-POC `CRS_v1 = 0.25 × (Clarity + Balance + Resilience + Capacity)` is superseded by Part1 per-pillar category weights. Do not use equal 25% pillar blend for new implementations.
 
 ---
 
@@ -2470,36 +2787,42 @@ Never null. Measures behavioral disengagement, not clinical change.
 
 ---
 
-### Appendix C — CRS quick-reference card
+### Appendix C — CRS unified quick-reference card (v3)
 
 ```
-┌─────────────────────────────────────────────────┐
-│           CRS CALCULATION (v2)                  │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  CRS = 0.40 × P(recovery)                       │
-│      + 0.20 × (1 − P(dropout))                  │
-│      + 0.20 × (1 − P(engagement_loss))          │
-│      + 0.20 × (1 − P(relapse))                  │
-│                                                 │
-│  Scale: 0–100                                   │
-│  Bands: Low (0-33) | Mod (34-66) | High (67+)  │
-│                                                 │
-│  State layer: Clarity, Balance, Resilience,     │
-│               Capacity (0–100 each)             │
-│                                                 │
-│  Trend layer: 7 trajectory metrics with         │
-│               direction arrows (↑ ↓ →)          │
-│                                                 │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    CRS UNIFIED (v3)                               │
+├──────────────────────────────────────────────────────────────────┤
+│  HEADLINE (mature):  CRS v2 = 0.40×P(recovery)                  │
+│                           + 0.20×(1−P(dropout))                  │
+│                           + 0.20×(1−P(engagement_loss))          │
+│                           + 0.20×(1−P(relapse))                  │
+│                                                                  │
+│  READINESS (always): Part1 5-category blend (§6.6)              │
+│                                                                  │
+│  STATE:  Clarity | Emotional Balance | Resilience | Capacity     │
+│          (Part1 category weights §7.6)                           │
+│                                                                  │
+│  TRAJECTORY: 7 trends + direction (↑ ↓ →)                      │
+│                                                                  │
+│  NARRATIVE: Where / Why / Aware / Risk / Next (§10.4)            │
+│                                                                  │
+│  SAFETY: IF core_om_risk ≥ 0.70 → cap scores at 40 (§7.7)       │
+│                                                                  │
+│  Scale: 0–100 | Bands: Low (0-33) Mod (34-66) High (67+)        │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Appendix D — Glossary
 
 | Term | Definition |
 |------|-----------|
-| **CRS** | Cognitive Readiness Score — composite 0–100 predicting future trajectory |
+| **CRS v2** | ML-composite headline score from four outcome probabilities (§6.1) |
+| **CRS readiness** | Part1 rule-based same-day readiness from 5 input categories (§6.6) |
 | **Pillar** | One of four state scores: Clarity, Emotional Balance, Resilience, Capacity |
+| **Input category** | Engine Part1 grouping: Assessment, Lifestyle+Biomarker, Tools, Forms, Therapist |
+| **Risk cap** | When `core_om_risk ≥ 0.70`, all display scores capped at 40 (§7.7) |
+| **Narrative layer** | API text blocks answering Why / Aware / Risk / Next (§10.4) |
 | **Trend metric** | Time-series composite measuring direction of change |
 | **Snapshot** | One row of features + labels for a user on a specific date |
 | **Outcome model** | ML classifier predicting a binary business/clinical label |
@@ -2507,18 +2830,78 @@ Never null. Measures behavioral disengagement, not clinical change.
 | **Direction** | 7-day trend of a metric: improving, stable, or declining |
 | **Band** | Categorical label (Low/Moderate/High) derived from score range |
 | **Cohort prior** | Default score (50) used during cold start for missing features |
-| **Censored label** | `recovery_label` or `relapse_label` = null when no valid follow-up; row excluded from clinical model training |
-| **MCID** | Minimum Clinically Important Difference — smallest change treated as meaningful (e.g. 5 points total, 0.10 subscale). See [§2.2.1](#221-glossary--terms-used-in-label-rules). |
-| **Subscale** | A section of CORE-OM (wellbeing, problems, functioning, risk), normalized 0–1. See [§2.2.2](#222-core-om-structure--four-subscales-and-direction-of-improvement). |
-| **Label version** | Immutable identifier (e.g. `label_v2.0.0`) for audit when thresholds or rules change |
+| **Censored label** | `recovery_label` or `relapse_label` = null when no valid follow-up |
+| **MCID** | Minimum Clinically Important Difference — see §2.2.1 |
+| **Subscale** | CORE-OM section (wellbeing, problems, functioning, risk) — see §2.2.2 |
+| **Label version** | Immutable identifier (e.g. `label_v2.0.0`) for audit |
+
+### Appendix F — Engine Part1 input registry
+
+Complete parameter catalog from **Engine Part1.docx**. Tag: **v1** = in L2 today; **v1.1** = ingestion backlog; **future** = not yet scoped.
+
+#### F.1 CRS readiness — all parameters (Table 1)
+
+| Parameter | Source screen | v1? | Why it matters |
+|-----------|---------------|-----|----------------|
+| CORE-OM Overall Score | Assessment | Yes | Overall psychological wellbeing and distress |
+| CORE-OM Life Functioning | Assessment | Yes | Daily/work functioning |
+| CORE-OM Problems Score | Assessment | Yes | Symptom burden |
+| CORE-OM Wellbeing Score | Assessment | Yes | Emotional/mental wellbeing state |
+| CORE-OM Risk Score | Assessment | Yes | Cap/override if elevated §7.7 |
+| Anxiety Score | Assessment | Partial (GAD-7) | Reduces readiness and clarity |
+| Depression Score | Assessment | v1.1 (PHQ-9) | Reduces motivation and capacity |
+| Trauma Score | Assessment | v1.1 | Affects regulation, sleep, resilience |
+| Sleep, Fatigue, HRV, Pulse | Lifestyle Tracker | Partial | Biological readiness anchors |
+| Exercise, Nutrition, Hydration | Lifestyle Tracker | v1.1 | Energy and regulation |
+| Cortisol, Thyroid/TSH, Blood Sugar | Biomarker | v1.1 | Stress-load and metabolic context |
+| Mood, Motivation, Confidence check-in | Daily Check-in | Yes | Emotional trends and engagement |
+| Memory Game, Connect Four | Games | v1.1 | Cognitive and behavioural signals |
+| Journaling tone/themes | Journal | future | Emotional tone and recovery signals |
+| Therapy intent, concerns, patterns | Forms | v1.1 | Contextual severity |
+| Therapist / session inputs | Therapy | Partial | Attendance + sheet sync v1.1 |
+
+#### F.2 Clarity parameters (Table 2)
+
+Memory Game, Connect Four, Sleep, Fatigue, HRV, Pulse, Hydration, Nutrition, Hunger, Blood Sugar, Thyroid/TSH, Vitamin D, CORE-OM Functioning, CORE-OM Problems, Motivation Check-In.
+
+#### F.3 Emotional Balance parameters (Table 3)
+
+Mood, Motivation, Confidence check-ins; Blank Slate / Letter to Self / Gratitude journals; Whack A Mole; CORE-OM wellbeing, problems, risk; Anxiety, Depression, Trauma scores; Sleep, Fatigue, Libido; Cortisol, Blood Sugar, Thyroid/TSH.
+
+#### F.4 Resilience parameters (Table 4)
+
+HRV, Sleep, Exercise, Fatigue, Sun Exposure, Nutrition, Hydration, Cortisol, Vitamin D, Thyroid/TSH, CORE-OM delta/previous scores, CORE-OM functioning, CORE-OM risk, Gratitude journal, Motivation check-in, App engagement, Guides usage.
+
+#### F.5 Capacity parameters (Table 5)
+
+CORE-OM functioning, overall, problems, risk; Sleep, Fatigue, HRV, Pulse, Exercise, Nutrition, Hydration, Hunger, Blood Sugar, Thyroid/TSH, HbA1c, Weight Change; Motivation, Confidence check-ins; Session booking / therapy engagement.
+
+**Therapist input sheet:** [Google Sheet — therapist parameters](https://docs.google.com/spreadsheets/d/1yXdZRUPRWBpzAOD4MToN2tVtHtmu312ofC2c3-bTBIc/edit?usp=sharing) (Engine Part1 reference).
+
+### Appendix G — Screen → L0 → L2 lineage
+
+| Product screen | Part1 parameters | L0 `event_type` | L2 column(s) | Pillar / CRS use |
+|----------------|------------------|-----------------|--------------|------------------|
+| Daily Check-in | Mood, motivation, confidence | `mood_checkin`, `motivation_checkin`, `confidence_checkin` | `mood_avg_14d`, `mood_volatility_14d`, `mood_slope_7d` | Emotional Balance, trends |
+| Assessment | CORE-OM, GAD-7, PHQ-9, trauma | `assessment_completed` | `core_om_*`, `gad7_normalized_latest` | All pillars, labels §4.3 |
+| Lifestyle Tracker | Sleep, HRV, fatigue, pulse, exercise | `sleep_session`, `heart_rate_daily`, lifestyle events | `sleep_avg_7d`, `hrv_avg`, etc. | CRS readiness, Resilience, Clarity |
+| Games | Memory Game, Connect Four | `game_session_completed` (v1.1) | `game_*_score_7d` (v1.1) | Clarity |
+| Journal | Tone, themes, gratitude | `journal_entry`, `journal_features_computed` | `journal_sentiment_*` (v1.1) | Emotional Balance, Resilience |
+| Forms | Intent, concerns, burnout | `intake_form_submitted` (v1.1) | `form_*` features (v1.1) | All pillars — Forms block |
+| Therapy | Sessions, attendance | `session_attended`, `session_missed` | `therapy_attendance_rate` | Capacity, dropout label |
+| CRM | User churn | `user_churned` | — (label job only) | `dropout_label` §4.3.7 |
+| Biomarkers | Cortisol, TSH, glucose, Vit D | `biomarker_result` (v1.1) | `biomarker_*` (v1.1) | Lifestyle+Biomarker block |
+
+Cross-reference: [Data-Ingestion-Layer-Production-Spec.md §18 Appendix A](./Data-Ingestion-Layer-Production-Spec.md#appendix-a--event-type-catalog).
 
 ### Appendix E — Revision history
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 2.0.0 | 2026-06-05 | Engineering | Clinical labels v2 (§4.3 subscales, censoring, precedence); Appendix B.1 decision tree |
-| 1.0.0 | 2026-06-05 | Engineering | Initial production spec from `CRS Calculation with trends.docx` |
+| **3.0.0 Unified** | 2026-06-05 | Engineering | Merged CRS v2 + Engine Part1: dual CRS model, pillar category weights, risk cap, narrative API, Appendices F/G |
+| 2.0.0 | 2026-06-05 | Engineering | Clinical labels v2 (§4.3), Appendix B.1 decision tree |
+| 1.0.0 | 2026-06-05 | Engineering | Initial production spec from CRS Calculation with trends.docx |
 
 ---
 
-*This document is the authoritative production specification for CRS calculation and trend metrics. For implementation details of the L2 feature store, L3 scoring service batch pipeline, and L1 API contracts, see `ENGINE-POC-COMPLETE-DOCUMENTATION.md`.*
+*This document is the **authoritative unified specification** for CRS v3. For the v2-only reference (without Engine Part1 integration), see [CRS-Calculation-and-Trends-Production-Spec.md](./CRS-Calculation-and-Trends-Production-Spec.md). For L0/L2 implementation details, see Data Ingestion and L2 Feature Store specs.*
