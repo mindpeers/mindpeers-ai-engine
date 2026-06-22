@@ -46,6 +46,8 @@ Single entry point for all production specifications, implementation artifacts, 
 
 | Layer | Primary spec | Status | Key outputs |
 |-------|-------------|--------|-------------|
+| **Program** | [final/README.md](./final/README.md) | **TRD + HLD per phase** | Phase 01–05 TRD/HLD, master program docs |
+| **Part1 binding** | [final/Engine-Part1-Full-Attribute-Binding-Spec.md](./final/Engine-Part1-Full-Attribute-Binding-Spec.md) | **Mandatory 100%** | 70 attributes → state + trajectory |
 | **L0** | [Data-Ingestion-Layer-Production-Spec.md](./Data-Ingestion-Layer-Production-Spec.md) | Production spec | Raw events, staging rollups |
 | **L2** | [L2-Feature-Store-Production-Spec.md](./L2-Feature-Store-Production-Spec.md) | Production spec | 34-column feature row, flags, meta |
 | **L2 (POC)** | [ENGINE-POC-COMPLETE-DOCUMENTATION.md](./ENGINE-POC-COMPLETE-DOCUMENTATION.md) Part 4 | POC closed | Registry reference |
@@ -155,6 +157,8 @@ python scripts/validate_dataset_columns.py Engine-POC-Sample-Dataset.xlsx
 
 | Date | Change |
 |------|--------|
+| 2026-06-05 | Data Ingestion v1.1.0 — Part1-complete event catalog (Appendix F); L2 §11 full lineage |
+| 2026-06-05 | Added `final/` TRD + HLD package (Phases 01–05 + master program) |
 | 2026-06-05 | Added CRS Unified v3 spec (Engine Part1 + CRS v2 + labels) |
 | 2026-06-05 | Added L0 + L2 production specs, schemas, ingestion/features stubs |
 | 2026-05-20 | ENGINE-POC consolidated doc (L1–L3 POC) |

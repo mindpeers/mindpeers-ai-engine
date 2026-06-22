@@ -1,9 +1,9 @@
 # Data Ingestion Layer — Production Specification
 
-**Version:** 1.0.0  
-**Status:** Production-ready specification  
+**Version:** 1.1.0  
+**Status:** Production-ready specification (Part1-complete event catalog)  
 **Layer:** L0 (feeds L2 Feature Store)  
-**Related docs:** [Engine-Architecture-Index.md](./Engine-Architecture-Index.md), [CRS-Calculation-and-Trends-Production-Spec.md](./CRS-Calculation-and-Trends-Production-Spec.md), [ENGINE-POC-COMPLETE-DOCUMENTATION.md](./ENGINE-POC-COMPLETE-DOCUMENTATION.md)  
+**Related docs:** [Engine-Architecture-Index.md](./Engine-Architecture-Index.md), [CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md](./CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md), [L2-Feature-Store-Production-Spec.md](./L2-Feature-Store-Production-Spec.md), [final/Engine-Part1-Full-Attribute-Binding-Spec.md](./final/Engine-Part1-Full-Attribute-Binding-Spec.md)  
 **Implementation:** [schemas/ingestion/](./schemas/ingestion/), [ingestion/](./ingestion/), [scripts/run_ingestion_demo.py](./scripts/run_ingestion_demo.py)  
 **Audience:** Engineering, Data Platform, Security, Clinical Ops  
 **Last updated:** 2026-06-05
@@ -898,7 +898,7 @@ L2 expects **staging** tables finalized for `local_date = D` before compute job 
 
 ### 11.2 L2 input (not L0 responsibility)
 
-L0 delivers staging rollups; **L2 computes**:
+L0 delivers staging rollups; **L2 computes** windowed features. Full **86-column** lineage matrix: [L2 spec §11](./L2-Feature-Store-Production-Spec.md#11-l0--l2-column-lineage-full-matrix).
 
 | From staging | L2 feature |
 |--------------|------------|
@@ -907,8 +907,12 @@ L0 delivers staging rollups; **L2 computes**:
 | 7 days of sleep_hours | `sleep_avg_7d`, `sleep_slope_7d` |
 | 30d sleep baseline | `sleep_delta_30d` |
 | therapy attended/scheduled 30d | `therapy_attendance_rate_30d` |
+| v1.1: `fatigue_level`, `exercise_minutes`, game scores | `fatigue_score_7d`, `exercise_*`, `game_*` |
+| v1.1: `intake_form_submitted` → raw.intake_forms | `form_*` columns |
+| v1.1: `biomarker_result` → raw.biomarkers | `biomarker_*`, `weight_delta_90d` |
+| v1.1: `therapist_profile_sync` | `therapist_*_score` |
 
-See [ENGINE-POC Part 4 §3](./ENGINE-POC-COMPLETE-DOCUMENTATION.md) for full computation spec.
+See [ENGINE-POC Part 4 §3](./ENGINE-POC-COMPLETE-DOCUMENTATION.md) for v1 computation detail; v2 formulas in [L2 §7.5](./L2-Feature-Store-Production-Spec.md).
 
 ### 11.3 Handoff failure example
 
@@ -1216,6 +1220,11 @@ Pattern engine: Warning card *"Engagement momentum declining"* despite Clarity s
 | `assessment_completed` | assessments | Yes |
 | `assessment_corrected` | assessments | Yes |
 | `content_viewed` | content_engagement | Optional |
+| `lifestyle_checkin` | app_mobile, lifestyle_tracker | **v1.1** |
+| `game_session_completed` | games | **v1.1** |
+| `intake_form_submitted` | forms, onboarding | **v1.1** |
+| `biomarker_result` | lab_partner, health_sync | **v1.1** |
+| `therapist_profile_sync` | therapy_platform, sheet_sync | **v1.1** |
 | `cogniart_task_completed` | cogniart | Future |
 
 ### Appendix B — Connector configuration template
@@ -1313,11 +1322,197 @@ Idempotency-Key: 1001:mood_checkin:2025-01-14T08:45:00+05:30
 | **local_date** | Calendar date in user's timezone for daily aggregation |
 | **Idempotency key** | Stable key ensuring at-most-once semantic writes |
 
-### Appendix F — Revision history
+### Appendix F — v1.1 event specifications (Engine Part1 complete)
+
+**Policy:** Every Part1 attribute (A01–A70) must trace to an L0 `event_type`. Full matrix: [Engine-Part1-Full-Attribute-Binding-Spec.md](./final/Engine-Part1-Full-Attribute-Binding-Spec.md).
+
+#### F.1 `lifestyle_checkin` — fatigue, exercise, nutrition, hydration, hunger, libido, sun
+
+**Attrs:** A12, A15–A20 | **Phase:** 5A | **Schema:** `schemas/ingestion/events/lifestyle_checkin.v1.json` (to add)
+
+```json
+{
+  "event_type": "lifestyle_checkin",
+  "payload": {
+    "fatigue_level": 6,
+    "fatigue_scale_max": 10,
+    "exercise_minutes": 30,
+    "exercise_intensity": "moderate",
+    "nutrition_quality": 4,
+    "nutrition_scale_max": 5,
+    "hydration_glasses": 8,
+    "hunger_level": 3,
+    "libido_level": 5,
+    "sun_exposure_minutes": 20
+  }
+}
+```
+
+**Staging rollup fields:** `fatigue_level`, `exercise_minutes`, `nutrition_quality`, `hydration_glasses`, `hunger_level`, `libido_level`, `sun_minutes`
+
+#### F.2 `game_session_completed` — Memory Game, Connect Four, Whack A Mole
+
+**Attrs:** A30–A32 | **Phase:** 5A
+
+```json
+{
+  "event_type": "game_session_completed",
+  "payload": {
+    "game_id": "memory_game",
+    "session_id": "gs_abc123",
+    "score": 85,
+    "max_score": 100,
+    "duration_seconds": 120,
+    "accuracy": 0.92,
+    "completed": true,
+    "rage_quit": false
+  }
+}
+```
+
+`game_id` enum: `memory_game`, `connect_four`, `whack_a_mole`
+
+#### F.3 `intake_form_submitted` — all form attributes A44–A64
+
+**Attrs:** A44–A64 | **Phase:** 5B
+
+```json
+{
+  "event_type": "intake_form_submitted",
+  "payload": {
+    "form_id": "therapy_intake_v1",
+    "form_version": "1.0.0",
+    "therapy_intent": "anxiety_management",
+    "primary_concern": "work_stress",
+    "primary_concern_severity": 7,
+    "free_text_concern": "…",
+    "work_stress_score": 8,
+    "routine_disruption": true,
+    "overthinking_score": 6,
+    "decision_fatigue_score": 7,
+    "brain_fog_score": 5,
+    "work_pressure_score": 8,
+    "emotional_triggers_score": 6,
+    "relationship_stress_score": 4,
+    "crisis_marker": false,
+    "coping_improvement_score": 3,
+    "coping_score": 5,
+    "trigger_reduction_score": 4,
+    "burnout_score": 7,
+    "work_functioning_score": 6,
+    "routine_difficulty_score": 5,
+    "overwhelm_score": 7,
+    "checkin_burden_score": 4
+  }
+}
+```
+
+NLP fields (`form_concern_nlp_severity`, `form_self_talk_score`) computed by async worker → `form_features_computed` event (optional v1.1.1).
+
+#### F.4 `biomarker_result` — cortisol, TSH, glucose, Vit D, HbA1c, weight
+
+**Attrs:** A21–A26 | **Phase:** 5C | **Requires:** `biomarker_consent = true` on user profile
+
+```json
+{
+  "event_type": "biomarker_result",
+  "payload": {
+    "marker_type": "cortisol",
+    "value": 12.5,
+    "unit": "ug/dL",
+    "reference_range": { "low": 5.0, "high": 25.0 },
+    "collected_at": "2026-06-01T08:00:00Z",
+    "lab_id": "lab_xyz",
+    "body_weight_kg": 72.5
+  }
+}
+```
+
+`marker_type` enum: `cortisol`, `tsh`, `glucose_fasting`, `vitamin_d`, `hba1c`, `weight`
+
+#### F.5 `therapist_profile_sync` — availability, affordability, language match
+
+**Attrs:** A68–A70 | **Phase:** 5E | **Source:** Google Sheet / therapy platform
+
+```json
+{
+  "event_type": "therapist_profile_sync",
+  "payload": {
+    "therapist_id": "th_442",
+    "availability_score": 0.85,
+    "affordability_score": 0.90,
+    "mode_match": true,
+    "language_match": true,
+    "match_score": 0.92,
+    "sheet_row_id": "row_128"
+  }
+}
+```
+
+#### F.6 Extended `assessment_completed` instruments
+
+**Attrs:** A08–A10 | **Phase:** 5C
+
+| instrument | Attr | max_score |
+|------------|------|-----------|
+| `PHQ-9` | A08 Depression | 27 |
+| `PTSD` | A09 Trauma | instrument-specific |
+| `ASRS` | A10 ADHD | instrument-specific |
+
+Extend existing `assessment_completed.v1.json` allOf blocks per instrument.
+
+#### F.7 Extended `journal_entry` / `journal_features_computed`
+
+**Attrs:** A33–A36, A56 | **Phase:** 5D
+
+| journal_type | Attr |
+|--------------|------|
+| `blank_slate` | A34 |
+| `letter_to_self` | A35 |
+| `gratitude` | A36 |
+
+`journal_features_computed` payload adds: `sentiment_score`, `stress_theme_detected`, `self_talk_score`
+
+#### F.8 Staging rollup extensions for v1.1
+
+Add to `staging.user_daily_activity` (additive columns):
+
+| Staging column | Source event(s) |
+|----------------|-----------------|
+| `fatigue_level` | lifestyle_checkin |
+| `exercise_minutes` | lifestyle_checkin |
+| `game_sessions_count` | game_session_completed |
+| `form_submitted_flag` | intake_form_submitted |
+| `biomarker_updated_flag` | biomarker_result |
+| `therapist_sync_at` | therapist_profile_sync |
+
+Full staging → L2 lineage: [L2 spec §11](./L2-Feature-Store-Production-Spec.md) + [Appendix E](./L2-Feature-Store-Production-Spec.md#appendix-e--part1-attribute--l2-column-matrix).
+
+#### F.9 Part1 attribute → L0 event quick reference
+
+| Attr IDs | event_type(s) |
+|----------|---------------|
+| A01–A07 | `assessment_completed` |
+| A08–A10 | `assessment_completed` (PHQ-9, PTSD, ASRS) |
+| A11, A13–A14 | `sleep_session`, `heart_rate_daily` |
+| A12, A15–A20 | `lifestyle_checkin` |
+| A21–A26 | `biomarker_result` |
+| A27–A29 | `mood_checkin`, `motivation_checkin`, `confidence_checkin` |
+| A30–A32 | `game_session_completed` |
+| A33–A36 | `journal_entry`, `journal_features_computed` |
+| A37–A41 | `app_session` |
+| A39 | `content_viewed` |
+| A42, A65 | check-in events + staging |
+| A43, A66–A67 | `session_attended`, `session_missed`, `session_scheduled` |
+| A44–A64 | `intake_form_submitted` |
+| A68–A70 | `therapist_profile_sync` |
+
+### Appendix G — Revision history
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-06-05 | Initial production spec |
+| 1.1.0 | 2026-06-05 | v1.1 event catalog (lifestyle_checkin, game_session_completed, intake_form_submitted, biomarker_result, therapist_profile_sync); Appendix F payloads; Part1 A01–A70 L0 traceability |
 
 ---
 

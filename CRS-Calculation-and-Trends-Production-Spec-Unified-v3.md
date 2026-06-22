@@ -1633,6 +1633,27 @@ Clinical sign-off required for `RISK_CAP_CEILING` and escalation workflow.
 
 When v1.1 parameters are missing, block weights renormalize over available parameters — same as L2 cold-start policy §13.
 
+**Mandatory policy:** All Engine Part1 attributes (70 canonical — see [Engine Part1 Full Attribute Binding Spec](./final/Engine-Part1-Full-Attribute-Binding-Spec.md)) **must** be wired to state and trajectory layers. Partial implementation is allowed by phase; spec coverage is **100%**.
+
+### 7.9 State layer — complete Part1 attribute binding
+
+Every attribute in Engine Part1 maps to **at least one** of: CRS readiness, Clarity, Emotional Balance, Resilience, Capacity. Binding uses five category blocks per score (§7.6) with **all** parameters in each block — not a subset.
+
+| Score | Part1 table | Category weights | Attribute count |
+|-------|-------------|------------------|-----------------|
+| CRS readiness | Table 1 + 6 | 30/30/15/15/10 | 25+ |
+| Clarity | Table 2 + 7 | 30/25/20/15/10 | 20+ |
+| Emotional Balance | Table 3 + 8 | 35/20/20/20/5 | 22+ |
+| Resilience | Table 4 + 9 | 30/25/20/15/10 | 20+ |
+| Capacity | Table 5 + 10 | 30/30/20/10/10 | 22+ |
+
+**Full matrix:** [final/Engine-Part1-Full-Attribute-Binding-Spec.md §3](./final/Engine-Part1-Full-Attribute-Binding-Spec.md)
+
+```
+StateScore = Σ category_weight × mean(normalized Part1 attributes in category)
+         → apply_risk_cap(core_om_risk)
+```
+
 ---
 
 ## 8. Trend metrics (trajectory layer)
@@ -1651,7 +1672,30 @@ Trend metrics are **time-series constructs** — they measure direction, velocit
 | 6 | Motivation Momentum | Psychological + Behavioral | 0–100 | Growth or withdrawal? |
 | 7 | Cognitive Momentum | Cognitive | 0–100 | Is thinking clarifying? |
 
-### 8.2 Trend metric 1 — Recovery Readiness
+### 8.9 Trajectory layer — complete Part1 attribute binding
+
+Trend metrics **must** use all trajectory-relevant Part1 attributes — not only the minimal v1 subset in §8.2–§8.8. When `feature_version >= feature_v2.0.0` (all Part1 waves complete), trend formulas **expand** as below.
+
+| Trend | Part1 attributes (canonical IDs) | Contribution type |
+|-------|----------------------------------|-------------------|
+| **Recovery Readiness** | A11 Sleep, A13 HRV, A12 Fatigue⁻, A15 Exercise, A19 Sun, A21 Cortisol⁻, A24 Vit D, A06 CORE-OM delta | Level + slope |
+| **Stress Load** | A07–A09 Anxiety/Depression/Trauma, A13–A14 HRV/Pulse, A21–A23 Cortisol/Glucose/TSH, A27 mood volatility | Level + inverted slopes |
+| **Sleep Consistency** | A11 Sleep variance, A12 Fatigue correlation | Volatility |
+| **Energy Rhythm** | A12 Fatigue, A15–A18 Lifestyle, A23 Glucose, A28 Motivation slope, A37 Engagement slope | Level + slope |
+| **Emotional Stability** | A27–A29 check-ins, A33–A36 journals, A07–A09 assessments, A54 triggers | Volatility + slope |
+| **Motivation Momentum** | A28 Motivation, A37–A39 engagement/guides, A42 check-in drop-off, A61 burnout forms | Slope |
+| **Cognitive Momentum** | A30–A31 games, A02 functioning, A12 Fatigue⁻, A50–A52 brain fog forms, A10 ADHD | Slope + level |
+
+**Full trajectory matrix:** [final/Engine-Part1-Full-Attribute-Binding-Spec.md §4](./final/Engine-Part1-Full-Attribute-Binding-Spec.md)
+
+**Upgrade rule:**
+
+| `feature_version` | Trend formula |
+|-------------------|---------------|
+| `feature_v1.0.0` | Minimal features (§8.2–§8.8) — Phase 1 |
+| `feature_v2.0.0` | **Full Part1 attribute bindings** — after Phase 5 waves W1–W7 |
+
+---
 
 **Definition:** How restored and physiologically ready the person is for cognitive and emotional demands.
 
@@ -2894,11 +2938,30 @@ CORE-OM functioning, overall, problems, risk; Sleep, Fatigue, HRV, Pulse, Exerci
 
 Cross-reference: [Data-Ingestion-Layer-Production-Spec.md §18 Appendix A](./Data-Ingestion-Layer-Production-Spec.md#appendix-a--event-type-catalog).
 
+### Appendix F.6 — Complete attribute index (70 canonical)
+
+**Authoritative binding document:** [final/Engine-Part1-Full-Attribute-Binding-Spec.md](./final/Engine-Part1-Full-Attribute-Binding-Spec.md)
+
+| Scope | Count | State | Trajectory |
+|-------|-------|-------|------------|
+| Assessment + CORE-OM | A01–A10 | All 5 scores | Stress, Emotional, Cognitive |
+| Lifestyle + wearable | A11–A20 | All pillars + CRS | Recovery, Energy, Sleep, Emotional |
+| Biomarkers | A21–A26 | CRS, Clarity, Balance, Capacity | Stress, Energy |
+| Check-ins | A27–A29 | All scores | Emotional, Motivation, Energy |
+| Games | A30–A32 | Clarity, Balance | Cognitive, Emotional |
+| Journals | A33–A36 | Balance, Resilience | Emotional, Cognitive |
+| App / platform | A37–A42 | CRS, Resilience, Capacity | Motivation, Energy |
+| Therapy / sessions | A43, A66–A67 | Capacity, CRS | Motivation |
+| Forms (intake) | A44–A65 | Per pillar §3 | Motivation, Emotional, Cognitive |
+| Therapist sheet | A68–A70 | All scores (therapist block) | Engagement |
+
+**Policy:** 100% of rows above required in production at `feature_v2.0.0`. Phase 1 ships W1 subset; Phase 5 completes W2–W7.
+
 ### Appendix E — Revision history
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| **3.0.0 Unified** | 2026-06-05 | Engineering | Merged CRS v2 + Engine Part1: dual CRS model, pillar category weights, risk cap, narrative API, Appendices F/G |
+| **3.0.0 Unified** | 2026-06-05 | Engine | Merged CRS v2 + Engine Part1; §7.9 §8.9 full attribute binding; Appendix F.6 |
 | 2.0.0 | 2026-06-05 | Engineering | Clinical labels v2 (§4.3), Appendix B.1 decision tree |
 | 1.0.0 | 2026-06-05 | Engineering | Initial production spec from CRS Calculation with trends.docx |
 

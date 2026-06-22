@@ -1,9 +1,9 @@
 # L2 Feature Store — Production Specification
 
-**Version:** 1.0.0  
-**Status:** Production-ready specification  
+**Version:** 2.0.0  
+**Status:** Production-ready specification (Part1-complete registry)  
 **Layer:** L2 (reads L0 staging; feeds L3 Scoring + L4 ML)  
-**Related docs:** [Data-Ingestion-Layer-Production-Spec.md](./Data-Ingestion-Layer-Production-Spec.md), [CRS-Calculation-and-Trends-Production-Spec.md](./CRS-Calculation-and-Trends-Production-Spec.md), [ENGINE-POC-COMPLETE-DOCUMENTATION.md](./ENGINE-POC-COMPLETE-DOCUMENTATION.md)  
+**Related docs:** [Data-Ingestion-Layer-Production-Spec.md](./Data-Ingestion-Layer-Production-Spec.md), [CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md](./CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md), [final/Engine-Part1-Full-Attribute-Binding-Spec.md](./final/Engine-Part1-Full-Attribute-Binding-Spec.md)  
 **Implementation:** [features/](./features/), [scripts/run_feature_pipeline_demo.py](./scripts/run_feature_pipeline_demo.py)  
 **Audience:** Engineering, ML, Data Platform  
 **Last updated:** 2026-06-05
@@ -355,9 +355,149 @@ Before window functions, collapse staging to **one value per user per local_date
 | `days_active` | meta | — | 0 | L3 maturity |
 | `system_type` | meta | — | 0 | L3 G15 |
 
-### 7.4 Deferred v1.1
+### 7.4 v1 registry summary (`feature_v1.0.0`)
 
-`phq9_*`, `ptsd_*`, `asrs_*`, `hrv_rmssd_7d`, `stress_episode_count_7d`, `composite_risk_percentile` (optional cohort job).
+34 columns — see §7.3. Ships in **Phase 1**. Covers Part1 attributes A01–A07, A11, A13, A27–A29, A37, A43 (W1 wave).
+
+### 7.5 Full registry v2.0.0 (`feature_v2.0.0`) — Engine Part1 complete
+
+**Policy:** All 70 Part1 canonical attributes (binding spec A01–A70) must have a target L2 column. v1 columns are **unchanged**; v2 **adds** columns below.
+
+**Version bump:** `feature_v1.0.0` → `feature_v2.0.0` when Phase 5 waves W2–W7 complete.
+
+#### 7.5.1 Assessment & clinical (A01–A10)
+
+| Canonical | Type | Window | Attr ID | Computation |
+|-----------|------|--------|---------|-------------|
+| `core_om_total_norm` | clinical | latest | A01 | `total_score / max_score` from latest CORE-OM |
+| `core_om_functioning` | clinical | latest | A02 | subscale normalized |
+| `core_om_problems` | clinical | latest | A03 | subscale normalized |
+| `core_om_wellbeing` | clinical | latest | A04 | subscale normalized |
+| `core_om_risk` | clinical | latest | A05 | subscale normalized |
+| `core_om_delta_30d` | delta | 30d | A06 | norm_total(D) − norm_total(D−30) |
+| `gad7_normalized_latest` | clinical | 90d | A07 | `total_score / 21` |
+| `phq9_normalized_latest` | clinical | 90d | A08 | `total_score / 27` |
+| `trauma_score_latest` | clinical | 90d | A09 | instrument-specific normalize |
+| `adhd_score_latest` | clinical | 90d | A10 | ASRS normalize |
+
+#### 7.5.2 Lifestyle & wearable (A11–A20)
+
+| Canonical | Type | Window | Attr ID | Computation |
+|-----------|------|--------|---------|-------------|
+| `sleep_avg_7d` | continuous | 7d | A11 | mean sleep hours |
+| `sleep_slope_7d` | slope | 7d | A11 | OLS on daily sleep |
+| `sleep_duration_variance_14d` | variance | 14d | A11 | std dev sleep duration |
+| `fatigue_score_7d` | continuous | 7d | A12 | mean fatigue (0–10 → 0–5) |
+| `hrv_avg` | continuous | 7d | A13 | mean RMSSD or vendor metric |
+| `hrv_trend` | slope | 7d | A13 | OLS on daily HRV |
+| `resting_hr_avg` | continuous | 7d | A14 | mean resting HR |
+| `resting_hr_trend` | slope | 7d | A14 | OLS on resting HR |
+| `exercise_days_7d` | count | 7d | A15 | days with exercise_minutes > 0 |
+| `exercise_minutes_7d` | continuous | 7d | A15 | sum minutes / 7 |
+| `nutrition_score_7d` | continuous | 7d | A16 | mean quality score 0–5 |
+| `hydration_score_7d` | continuous | 7d | A17 | mean glasses vs target |
+| `hunger_level_7d` | continuous | 7d | A18 | mean hunger 0–5 |
+| `sun_exposure_minutes_7d` | continuous | 7d | A19 | mean minutes outdoors |
+| `libido_level_14d` | continuous | 14d | A20 | mean libido 0–5 |
+
+#### 7.5.3 Biomarkers (A21–A26)
+
+| Canonical | Type | Window | Attr ID | Computation |
+|-----------|------|--------|---------|-------------|
+| `biomarker_cortisol_latest` | clinical | 90d | A21 | latest normalized vs ref range |
+| `biomarker_tsh_latest` | clinical | 90d | A22 | latest normalized |
+| `biomarker_glucose_latest` | clinical | 90d | A23 | latest fasting glucose norm |
+| `biomarker_vitd_latest` | clinical | 180d | A24 | latest Vit D norm |
+| `biomarker_hba1c_latest` | clinical | 365d | A25 | latest HbA1c norm |
+| `weight_delta_90d` | delta | 90d | A26 | % change vs 90d ago |
+
+#### 7.5.4 Check-ins & engagement (A27–A29, A37–A42)
+
+| Canonical | Type | Window | Attr ID |
+|-----------|------|--------|---------|
+| `mood_avg_14d`, `mood_slope_7d`, `mood_volatility_14d` | various | 7–14d | A27 |
+| `motivation_avg_14d`, `motivation_slope_7d` | various | 7–14d | A28 |
+| `confidence_avg_14d`, `confidence_slope_7d` | various | 7–14d | A29 |
+| `engagement_rate_7d`, `engagement_slope_7d` | rate/slope | 7d | A37 |
+| `support_seeking_rate_30d` | rate | 30d | A38 |
+| `guide_usage_rate_30d` | rate | 30d | A39 |
+| `focus_session_rate_7d` | rate | 7d | A40 |
+| `task_completion_rate_7d` | rate | 7d | A41 |
+| `dropoff_rate_7d` | rate | 7d | A41 |
+| `checkin_completion_rate_7d` | rate | 7d | A42 |
+| `missed_checkin_days_7d` | count | 7d | A65 |
+
+#### 7.5.5 Games (A30–A32)
+
+| Canonical | Type | Window | Attr ID | Computation |
+|-----------|------|--------|---------|-------------|
+| `game_memory_score_7d` | continuous | 7d | A30 | mean normalized game score |
+| `game_memory_slope_7d` | slope | 7d | A30 | OLS on memory scores |
+| `game_connect4_score_7d` | continuous | 7d | A31 | mean normalized |
+| `game_whack_score_7d` | continuous | 7d | A32 | mean normalized |
+| `game_frustration_proxy` | continuous | 7d | A32 | miss rate or rage-quit proxy |
+
+#### 7.5.6 Journal NLP (A33–A36, A56)
+
+| Canonical | Type | Window | Attr ID |
+|-----------|------|--------|---------|
+| `journal_sentiment_7d` | continuous | 7d | A33 |
+| `journal_stress_theme_flag` | flag | 7d | A33 |
+| `journal_blank_slate_sentiment_7d` | continuous | 7d | A34 |
+| `journal_letter_self_sentiment_7d` | continuous | 7d | A35 |
+| `journal_gratitude_sentiment_7d` | continuous | 7d | A36 |
+| `form_self_talk_score` | continuous | 30d | A56 | NLP + form composite |
+
+#### 7.5.7 Therapy & therapist (A43, A66–A70)
+
+| Canonical | Type | Window | Attr ID |
+|-----------|------|--------|---------|
+| `therapy_attendance_rate_30d` | rate | 30d | A43 |
+| `therapy_missed_rate_30d` | rate | 30d | A66 |
+| `days_since_last_session` | count | — | A67 |
+| `therapist_availability_score` | continuous | latest | A68 |
+| `therapy_affordability_score` | continuous | latest | A69 |
+| `therapist_match_score` | continuous | latest | A70 |
+
+#### 7.5.8 Forms / intake (A44–A64)
+
+All normalized 0–1 or 0–100 at L2 boundary. Source: latest `intake_form_submitted` within lookback (default 90d) or rolling if form supports updates.
+
+| Canonical | Attr ID | Part1 form field |
+|-----------|---------|------------------|
+| `form_therapy_intent_score` | A44 | therapy intent |
+| `form_primary_concern_severity` | A45 | primary concern |
+| `form_concern_nlp_severity` | A46 | free-text concern NLP |
+| `form_work_stress_score` | A47 | work-stress pattern |
+| `form_routine_disruption_flag` | A48 | routine disruption |
+| `form_checkin_burden_score` | A49 | check-in completion burden |
+| `form_overthinking_score` | A50 | overthinking themes |
+| `form_decision_fatigue_score` | A51 | decision fatigue |
+| `form_brain_fog_score` | A52 | brain fog |
+| `form_work_pressure_score` | A53 | work-pressure |
+| `form_emotional_triggers_score` | A54 | emotional triggers |
+| `form_relationship_stress_score` | A55 | relationship patterns |
+| `form_crisis_marker_flag` | A57 | crisis/risk markers |
+| `form_coping_improvement_score` | A58 | pattern improvement |
+| `form_coping_score` | A59 | coping behaviour |
+| `form_trigger_reduction_score` | A60 | trigger reduction |
+| `form_burnout_score` | A61 | burnout patterns |
+| `form_work_functioning_score` | A62 | work functioning |
+| `form_routine_difficulty_score` | A63 | daily routine difficulty |
+| `form_overwhelm_score` | A64 | self-reported overwhelm |
+
+#### 7.5.9 Meta & flags (unchanged from v1)
+
+`data_completeness_score`, `days_active`, `system_type`, `withdrawal_flag`, `sleep_mood_coupled_decline`, `cortisol_flag` — see §7.3.
+
+#### 7.5.10 Column count summary
+
+| Version | New columns | Cumulative | Part1 attrs covered |
+|---------|-------------|------------|---------------------|
+| v1.0.0 | 34 | 34 | 18 (W1) |
+| v2.0.0 | +52 | **86** | **70 (100%)** |
+
+Full attribute ID cross-reference: [Appendix E](#appendix-e--part1-attribute--l2-column-matrix).
 
 ---
 
@@ -685,35 +825,173 @@ L3 maps to `confidence_tier` (see CRS / ENGINE-POC L3 §10).
 
 ## 11. L0 → L2 column lineage (full matrix)
 
-| L2 column | L0 / staging source | Computed in |
-|-----------|---------------------|-------------|
-| `mood_avg_14d` | `staging.mood_scores` | L2 |
-| `mood_slope_7d` | `staging.mood_scores` | L2 |
-| `mood_volatility_14d` | `staging.mood_scores` | L2 |
-| `motivation_avg_14d` | `staging.motivation_scores` | L2 |
-| `confidence_avg_14d` | `staging.confidence_scores` | L2 |
-| `engagement_rate_7d` | `app_sessions`, `tasks_completed` | L2 |
-| `engagement_slope_7d` | derived daily engagement series | L2 |
-| `engagement_delta_30d` | engagement rate now vs D−30 | L2 |
-| `sleep_avg_7d` | `staging.sleep_hours` | L2 |
-| `sleep_delta_30d` | sleep 7d blocks now vs baseline | L2 |
-| `sleep_slope_7d` | `staging.sleep_hours` | L2 |
-| `sleep_persistence_low_days` | `staging.sleep_hours` | L2 |
-| `sleep_duration_variance_14d` | `staging.sleep_hours` | L2 |
-| `bedtime_variance_14d` | `staging.bedtime_local` | L2 |
-| `resting_hr_relative` | `staging.resting_hr_bpm` | L2 |
-| `activity_slope_7d` | `staging.active_minutes` | L2 |
-| `therapy_attendance_rate_30d` | attended / missed / scheduled | L2 |
-| `core_om_*` | `raw.assessments` | L2 |
-| `gad7_normalized_latest` | `raw.assessments` | L2 |
-| `journaling_concern_score_7d` | NLP → `journal_concern_scores` | L2 |
-| `cortisol_flag` | stress API + HR + volatility | L2 |
-| `withdrawal_flag` | `engagement_rate_7d` | L2 |
-| `sleep_mood_coupled_decline` | sleep_delta + mood_slope | L2 |
-| `days_active` | `raw.users` | L2 |
-| `system_type` | `raw.users` | L0/L2 passthrough |
-| `data_completeness_score` | all above | L2 |
-| `composite_risk_percentile` | cohort job (optional) | L2 v1.1 |
+**Scope:** All **86** columns at `feature_v2.0.0` (34 v1 + 52 v2 additive). L0 event specs: [Data Ingestion Appendix F](./Data-Ingestion-Layer-Production-Spec.md#appendix-f--v11-event-specifications-engine-part1-complete). Attribute binding: [Appendix E](#appendix-e--part1-attribute--l2-column-matrix).
+
+**Legend:** `staging.*` = `staging.user_daily_activity` daily rollup unless noted.
+
+### 11.1 v1 core (Phase 1 — W1 attributes)
+
+| L2 column | L0 event(s) | Staging / raw source | Computed in |
+|-----------|-------------|----------------------|-------------|
+| `mood_avg_14d` | `mood_checkin` | `mood_scores[]` | L2 |
+| `mood_slope_7d` | `mood_checkin` | `mood_scores[]` | L2 |
+| `mood_volatility_14d` | `mood_checkin` | `mood_scores[]` | L2 |
+| `mood_delta_30d` | `mood_checkin` | `mood_scores[]` | L2 |
+| `motivation_avg_14d` | `motivation_checkin` | `motivation_scores[]` | L2 |
+| `motivation_slope_7d` | `motivation_checkin` | `motivation_scores[]` | L2 |
+| `confidence_avg_14d` | `confidence_checkin` | `confidence_scores[]` | L2 |
+| `confidence_slope_7d` | `confidence_checkin` | `confidence_scores[]` | L2 |
+| `engagement_rate_7d` | `app_session` | `app_sessions`, `tasks_completed` | L2 |
+| `engagement_slope_7d` | `app_session` | derived `engagement_daily` | L2 |
+| `engagement_delta_30d` | `app_session` | engagement rate now vs D−30 | L2 |
+| `sleep_avg_7d` | `sleep_session` | `sleep_hours` | L2 |
+| `sleep_delta_30d` | `sleep_session` | `sleep_hours` (30d baseline) | L2 |
+| `sleep_slope_7d` | `sleep_session` | `sleep_hours` | L2 |
+| `sleep_persistence_low_days` | `sleep_session` | `sleep_hours` | L2 |
+| `sleep_duration_variance_14d` | `sleep_session` | `sleep_hours` | L2 |
+| `bedtime_variance_14d` | `sleep_session` | `bedtime_local` | L2 |
+| `resting_hr_relative` | `heart_rate_daily` | `resting_hr_bpm` | L2 |
+| `activity_slope_7d` | `activity_daily` | `active_minutes` | L2 |
+| `therapy_attendance_rate_30d` | `session_attended`, `session_missed`, `session_scheduled` | `therapy_attended`, `therapy_missed`, `therapy_scheduled` | L2 |
+| `core_om_wellbeing` | `assessment_completed` | `raw.assessments` (CORE-OM) | L2 |
+| `core_om_problems` | `assessment_completed` | `raw.assessments` (CORE-OM) | L2 |
+| `core_om_functioning` | `assessment_completed` | `raw.assessments` (CORE-OM) | L2 |
+| `core_om_risk` | `assessment_completed` | `raw.assessments` (CORE-OM) | L2 |
+| `core_om_delta_30d` | `assessment_completed` | `raw.assessments` (CORE-OM) | L2 |
+| `gad7_normalized_latest` | `assessment_completed` | `raw.assessments` (GAD-7) | L2 |
+| `journaling_concern_score_7d` | `journal_entry`, `journal_features_computed` | `journal_concern_scores[]` | L2 |
+| `cortisol_flag` | `heart_rate_daily`, stress API | HR + mood volatility proxy | L2 |
+| `withdrawal_flag` | `app_session` | `engagement_rate_7d` (derived) | L2 |
+| `sleep_mood_coupled_decline` | `sleep_session`, `mood_checkin` | `sleep_delta_30d` + `mood_slope_7d` | L2 |
+| `days_active` | `user_registered`, all events | `raw.users` + first activity | L2 |
+| `system_type` | `user_profile_updated` | `raw.users.system_type` | L0/L2 passthrough |
+| `data_completeness_score` | all above | coverage over registry | L2 |
+| `composite_risk_percentile` | cohort job | optional v1.1 | L2 |
+
+### 11.2 v2 additive — assessment & clinical (A01–A10)
+
+| L2 column | L0 event(s) | Staging / raw source | Phase |
+|-----------|-------------|----------------------|-------|
+| `core_om_total_norm` | `assessment_completed` | `raw.assessments` latest CORE-OM | 1 |
+| `phq9_normalized_latest` | `assessment_completed` (PHQ-9) | `raw.assessments` | 5C |
+| `trauma_score_latest` | `assessment_completed` (PTSD) | `raw.assessments` | 5C |
+| `adhd_score_latest` | `assessment_completed` (ASRS) | `raw.assessments` | 5C |
+
+*A02–A07 columns overlap v1 registry (`core_om_*`, `gad7_normalized_latest`, `core_om_delta_30d`).*
+
+### 11.3 v2 additive — lifestyle & wearable (A11–A20)
+
+| L2 column | L0 event(s) | Staging source | Phase |
+|-----------|-------------|----------------|-------|
+| `fatigue_score_7d` | `lifestyle_checkin` | `fatigue_level` | 5A |
+| `hrv_avg` | `heart_rate_daily` | `hrv_rmssd_ms` | 1/5 |
+| `hrv_trend` | `heart_rate_daily` | `hrv_rmssd_ms` | 5A |
+| `resting_hr_avg` | `heart_rate_daily` | `resting_hr_bpm` | 5A |
+| `resting_hr_trend` | `heart_rate_daily` | `resting_hr_bpm` | 5A |
+| `exercise_days_7d` | `lifestyle_checkin` | `exercise_minutes` | 5A |
+| `exercise_minutes_7d` | `lifestyle_checkin` | `exercise_minutes` | 5A |
+| `nutrition_score_7d` | `lifestyle_checkin` | `nutrition_quality` | 5A |
+| `hydration_score_7d` | `lifestyle_checkin` | `hydration_glasses` | 5A |
+| `hunger_level_7d` | `lifestyle_checkin` | `hunger_level` | 5A |
+| `sun_exposure_minutes_7d` | `lifestyle_checkin` | `sun_minutes` | 5A |
+| `libido_level_14d` | `lifestyle_checkin` | `libido_level` | 5A |
+
+### 11.4 v2 additive — biomarkers (A21–A26)
+
+| L2 column | L0 event(s) | Staging / raw source | Phase |
+|-----------|-------------|----------------------|-------|
+| `biomarker_cortisol_latest` | `biomarker_result` | `raw.biomarkers` (cortisol) | 5C |
+| `biomarker_tsh_latest` | `biomarker_result` | `raw.biomarkers` (tsh) | 5C |
+| `biomarker_glucose_latest` | `biomarker_result` | `raw.biomarkers` (glucose) | 5C |
+| `biomarker_vitd_latest` | `biomarker_result` | `raw.biomarkers` (vitamin_d) | 5C |
+| `biomarker_hba1c_latest` | `biomarker_result` | `raw.biomarkers` (hba1c) | 5C |
+| `weight_delta_90d` | `biomarker_result` | `body_weight_kg` series | 5C |
+
+### 11.5 v2 additive — games (A30–A32)
+
+| L2 column | L0 event(s) | Staging source | Phase |
+|-----------|-------------|----------------|-------|
+| `game_memory_score_7d` | `game_session_completed` (memory_game) | `game_memory_scores[]` | 5A |
+| `game_memory_slope_7d` | `game_session_completed` (memory_game) | `game_memory_scores[]` | 5A |
+| `game_connect4_score_7d` | `game_session_completed` (connect_four) | `game_connect4_scores[]` | 5A |
+| `game_whack_score_7d` | `game_session_completed` (whack_a_mole) | `game_whack_scores[]` | 5A |
+| `game_frustration_proxy` | `game_session_completed` | `rage_quit` / miss rate | 5A |
+
+### 11.6 v2 additive — journal NLP (A33–A36, A56)
+
+| L2 column | L0 event(s) | Staging source | Phase |
+|-----------|-------------|----------------|-------|
+| `journal_sentiment_7d` | `journal_features_computed` | `journal_sentiment_scores[]` | 5D |
+| `journal_stress_theme_flag` | `journal_features_computed` | `stress_theme_detected` | 5D |
+| `journal_blank_slate_sentiment_7d` | `journal_entry` (blank_slate) + NLP | `journal_blank_sentiment[]` | 5D |
+| `journal_letter_self_sentiment_7d` | `journal_entry` (letter_to_self) + NLP | `journal_letter_sentiment[]` | 5D |
+| `journal_gratitude_sentiment_7d` | `journal_entry` (gratitude) + NLP | `journal_gratitude_sentiment[]` | 5D |
+| `form_self_talk_score` | `intake_form_submitted`, NLP worker | `form_self_talk_score` | 5B/5D |
+
+### 11.7 v2 additive — engagement & check-ins (A38–A42, A65)
+
+| L2 column | L0 event(s) | Staging source | Phase |
+|-----------|-------------|----------------|-------|
+| `support_seeking_rate_30d` | `app_session`, `content_viewed` | `support_seek_events` | 5D |
+| `guide_usage_rate_30d` | `content_viewed` (guides) | `guide_views` | 5D |
+| `focus_session_rate_7d` | `app_session` (focus mode) | `focus_sessions` | 5D |
+| `task_completion_rate_7d` | `app_session` | `tasks_completed` / `tasks_started` | 5D |
+| `dropoff_rate_7d` | `app_session` | `dropoff_events` | 5D |
+| `checkin_completion_rate_7d` | `mood_checkin`, `motivation_checkin`, `confidence_checkin` | expected vs actual check-ins | 5D |
+| `missed_checkin_days_7d` | check-in events | `missed_checkin_flag` | 5D |
+
+### 11.8 v2 additive — therapy (A43, A66–A67)
+
+| L2 column | L0 event(s) | Staging source | Phase |
+|-----------|-------------|----------------|-------|
+| `therapy_missed_rate_30d` | `session_missed` | `therapy_missed` | 5E |
+| `days_since_last_session` | `session_attended` | `last_session_date` | 5E |
+
+### 11.9 v2 additive — therapist sheet (A68–A70)
+
+| L2 column | L0 event(s) | Staging / raw source | Phase |
+|-----------|-------------|----------------------|-------|
+| `therapist_availability_score` | `therapist_profile_sync` | `raw.therapist_profiles.availability_score` | 5E |
+| `therapy_affordability_score` | `therapist_profile_sync` | `raw.therapist_profiles.affordability_score` | 5E |
+| `therapist_match_score` | `therapist_profile_sync` | `raw.therapist_profiles.match_score` | 5E |
+
+### 11.10 v2 additive — intake forms (A44–A64)
+
+All sourced from latest `intake_form_submitted` within 90d lookback → `raw.intake_forms` → L2 latest-value normalize.
+
+| L2 column | Form field (Part1) | Attr |
+|-----------|-------------------|------|
+| `form_therapy_intent_score` | therapy intent | A44 |
+| `form_primary_concern_severity` | primary concern | A45 |
+| `form_concern_nlp_severity` | free-text concern NLP | A46 |
+| `form_work_stress_score` | work-stress pattern | A47 |
+| `form_routine_disruption_flag` | routine disruption | A48 |
+| `form_checkin_burden_score` | check-in burden | A49 |
+| `form_overthinking_score` | overthinking | A50 |
+| `form_decision_fatigue_score` | decision fatigue | A51 |
+| `form_brain_fog_score` | brain fog | A52 |
+| `form_work_pressure_score` | work pressure | A53 |
+| `form_emotional_triggers_score` | emotional triggers | A54 |
+| `form_relationship_stress_score` | relationship stress | A55 |
+| `form_crisis_marker_flag` | crisis marker | A57 |
+| `form_coping_improvement_score` | coping improvement | A58 |
+| `form_coping_score` | coping behaviour | A59 |
+| `form_trigger_reduction_score` | trigger reduction | A60 |
+| `form_burnout_score` | burnout | A61 |
+| `form_work_functioning_score` | work functioning | A62 |
+| `form_routine_difficulty_score` | routine difficulty | A63 |
+| `form_overwhelm_score` | overwhelm | A64 |
+
+**Phase:** 5B for all form columns.
+
+### 11.11 Lineage verification checklist
+
+| Check | Pass criteria |
+|-------|---------------|
+| Part1 coverage | Every A01–A70 maps to ≥1 L2 column (Appendix E) |
+| L0 traceability | Every v2 column maps to ≥1 L0 `event_type` (Data Ingestion F.9) |
+| PIT safety | Latest-value features use `occurred_at ≤ as_of_date` |
+| Null policy | Missing staging → `null` + `{col}_missing` flag (§12) |
 
 ---
 
@@ -911,7 +1189,63 @@ See [features/compute.py](./features/compute.py).
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0.0 | 2026-06-05 | §7.5 full Part1 registry (86 cols); Appendix E attribute matrix; §11 full L0→L2 lineage (86 cols) |
 | 1.0.0 | 2026-06-05 | Initial L2 production spec; mood 0–5; cortisol proxy; full lineage |
+
+### Appendix E — Part1 attribute → L2 column matrix
+
+Authoritative binding: [final/Engine-Part1-Full-Attribute-Binding-Spec.md](./final/Engine-Part1-Full-Attribute-Binding-Spec.md)
+
+| Attr ID | Part1 name | Primary L2 column(s) | State scores | Trends |
+|---------|------------|----------------------|--------------|--------|
+| A01 | CORE-OM Overall | `core_om_total_norm` | CRS, Capacity | Stress, Recovery |
+| A02 | CORE-OM Functioning | `core_om_functioning` | Clarity, Capacity, Resilience | Cognitive |
+| A03 | CORE-OM Problems | `core_om_problems` | CRS, Clarity, Balance, Capacity | Stress |
+| A04 | CORE-OM Wellbeing | `core_om_wellbeing` | CRS, Balance | Emotional |
+| A05 | CORE-OM Risk | `core_om_risk` | All (risk cap) | — |
+| A06 | CORE-OM Delta | `core_om_delta_30d` | Resilience | Recovery |
+| A07 | Anxiety (GAD-7) | `gad7_normalized_latest` | CRS, Clarity, Balance | Stress, Emotional |
+| A08 | Depression (PHQ-9) | `phq9_normalized_latest` | CRS, Balance | Stress, Emotional |
+| A09 | Trauma | `trauma_score_latest` | CRS, Balance | Stress, Emotional |
+| A10 | ADHD (ASRS) | `adhd_score_latest` | Clarity | Cognitive |
+| A11 | Sleep | `sleep_avg_7d`, `sleep_slope_7d`, `sleep_duration_variance_14d` | All | Recovery, Sleep, Energy |
+| A12 | Fatigue | `fatigue_score_7d` | CRS, Clarity, Balance, Capacity | Recovery⁻, Energy, Cognitive⁻ |
+| A13 | HRV | `hrv_avg`, `hrv_trend` | CRS, Clarity, Resilience, Capacity | Recovery, Stress |
+| A14 | Pulse | `resting_hr_avg`, `resting_hr_trend` | CRS, Clarity, Capacity | Stress |
+| A15 | Exercise | `exercise_days_7d`, `exercise_minutes_7d` | CRS, Resilience, Capacity | Recovery, Energy |
+| A16 | Nutrition | `nutrition_score_7d` | CRS, Clarity, Resilience, Capacity | Energy |
+| A17 | Hydration | `hydration_score_7d` | CRS, Clarity, Resilience, Capacity | Energy |
+| A18 | Hunger | `hunger_level_7d` | Clarity, Capacity | Energy |
+| A19 | Sun Exposure | `sun_exposure_minutes_7d` | Resilience | Recovery |
+| A20 | Libido | `libido_level_14d` | Balance | Emotional |
+| A21 | Cortisol | `biomarker_cortisol_latest` | CRS, Balance, Resilience | Stress |
+| A22 | Thyroid/TSH | `biomarker_tsh_latest` | CRS, Clarity, Balance, Capacity | Stress, Emotional |
+| A23 | Blood Sugar | `biomarker_glucose_latest` | CRS, Clarity, Balance, Capacity | Stress, Energy |
+| A24 | Vitamin D | `biomarker_vitd_latest` | Clarity, Resilience | Recovery |
+| A25 | HbA1c | `biomarker_hba1c_latest` | Capacity | Energy |
+| A26 | Weight Change | `weight_delta_90d` | Capacity | Energy |
+| A27 | Mood | `mood_avg_14d`, `mood_slope_7d`, `mood_volatility_14d` | CRS, Balance | Emotional, Stress |
+| A28 | Motivation | `motivation_avg_14d`, `motivation_slope_7d` | CRS, Clarity, Resilience, Capacity | Motivation, Energy |
+| A29 | Confidence | `confidence_avg_14d`, `confidence_slope_7d` | CRS, Balance, Capacity | Emotional, Motivation |
+| A30 | Memory Game | `game_memory_score_7d`, `game_memory_slope_7d` | CRS, Clarity | Cognitive |
+| A31 | Connect Four | `game_connect4_score_7d` | CRS, Clarity | Cognitive |
+| A32 | Whack A Mole | `game_whack_score_7d`, `game_frustration_proxy` | Balance | Emotional |
+| A33 | Journal tone/themes | `journal_sentiment_7d`, `journal_stress_theme_flag` | CRS, Balance | Emotional |
+| A34 | Blank Slate Journal | `journal_blank_slate_sentiment_7d` | Balance | Emotional |
+| A35 | Letter to Self | `journal_letter_self_sentiment_7d` | Balance | Emotional |
+| A36 | Gratitude Journal | `journal_gratitude_sentiment_7d` | Balance, Resilience | Emotional |
+| A37 | App engagement | `engagement_rate_7d`, `engagement_slope_7d` | CRS, Resilience, Capacity | Motivation, Energy |
+| A38 | Support-seeking | `support_seeking_rate_30d` | Resilience | Motivation |
+| A39 | Guides usage | `guide_usage_rate_30d` | Resilience | Motivation |
+| A40 | Focus behaviour | `focus_session_rate_7d` | Clarity, Capacity | Cognitive |
+| A41 | Completion/drop-off | `task_completion_rate_7d`, `dropoff_rate_7d` | Clarity | Cognitive |
+| A42 | Check-in drop-off | `checkin_completion_rate_7d` | Balance | Motivation |
+| A43 | Therapy attendance | `therapy_attendance_rate_30d` | CRS, Capacity | Motivation |
+| A44–A64 | Forms (21 fields) | `form_*` columns §7.5.8 | Per pillar §3 binding spec | Motivation, Emotional, Cognitive |
+| A65 | Missed check-ins | `missed_checkin_days_7d` | Capacity | Motivation |
+| A66 | Session missed | `therapy_missed_rate_30d` | CRS, Capacity | Motivation |
+| A67 | Days since session | `days_since_last_session` | Capacity | Motivation |
+| A68–A70 | Therapist sheet | `therapist_*_score` | All (therapist block) | Engagement |
 
 ---
 
