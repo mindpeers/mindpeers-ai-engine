@@ -12,7 +12,10 @@
 
 ## Development roadmap
 
-**[Development-Roadmap.md](./Development-Roadmap.md)** — program schedule of record: phase timeline, week-by-week milestones, Phase 5 waves, team ownership, gates, risks, and Gantt diagram.
+| Audience | Document |
+|----------|----------|
+| **Product, Clinical, Leadership** | [Development-Roadmap-Stakeholder.md](./Development-Roadmap-Stakeholder.md) — plain-language timeline, user outcomes, milestones |
+| **Engineering, Data, ML** | [Development-Roadmap.md](./Development-Roadmap.md) — technical schedule, waves, gates, Gantt |
 
 ```bash
 pandoc final/MindPeers-Engine-Master-Production-Spec.md \

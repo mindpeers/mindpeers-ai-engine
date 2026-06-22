@@ -5,7 +5,7 @@
 **Status:** For review  
 **Date:** 2026-06-05  
 **Horizon:** 11+ weeks to GA; Phase 5 ongoing  
-**Related:** [Master Production Spec](./MindPeers-Engine-Master-Production-Spec.md) · [Part1 Binding Spec](./Engine-Part1-Full-Attribute-Binding-Spec.md) · [Phase TRDs](./README.md)
+**Related:** [Master Production Spec](./MindPeers-Engine-Master-Production-Spec.md) · [Stakeholder Roadmap](./Development-Roadmap-Stakeholder.md) · [Part1 Binding Spec](./Engine-Part1-Full-Attribute-Binding-Spec.md) · [Phase TRDs](./README.md)
 
 ---
 
