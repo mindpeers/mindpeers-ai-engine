@@ -77,27 +77,27 @@ Clinical team signs off on risk thresholds before we go live.
 
 ```mermaid
 gantt
-    title Stakeholder view — when capabilities land
+    title Stakeholder view - when capabilities land
     dateFormat YYYY-MM-DD
     axisFormat %b %d
 
     section Prepare
-    Approvals & clinical sign-off       :prep, 2026-06-09, 10d
+    Approvals and clinical sign-off     :prep, 2026-06-09, 10d
 
     section Build core report
-    First working scores (internal)       :core, 2026-06-16, 28d
+    First working scores internal       :core, 2026-06-16, 28d
 
     section Add intelligence
-    Prediction models trained           :ml, after core, 28d
+    Prediction models trained           :ml, 2026-07-14, 28d
 
     section Validate
-    Dual scores + personalized text     :val, after ml, 14d
+    Dual scores and personalized text   :val, 2026-08-11, 14d
 
     section Launch
-    Public release                      :launch, after val, 21d
+    Public release                      :launch, 2026-08-25, 21d
 
-    section Enrich data (parallel)
-    More inputs: games, forms, labs     :expand, 2026-07-14, 120d
+    section Enrich data parallel
+    More inputs games forms labs        :expand, 2026-07-14, 120d
 ```
 
 ---
@@ -341,6 +341,7 @@ pandoc final/Development-Roadmap-Stakeholder.md \
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.1 | 2026-06-05 | Fix Mermaid Gantt syntax for GitHub renderer |
 | 1.0.0 | 2026-06-05 | Initial non-technical stakeholder roadmap |
 
 ---

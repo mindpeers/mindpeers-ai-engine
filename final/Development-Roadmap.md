@@ -48,42 +48,42 @@
 
 ```mermaid
 gantt
-    title MindPeers Engine — Development Roadmap
+    title MindPeers Engine Development Roadmap
     dateFormat YYYY-MM-DD
     axisFormat %b %d
 
     section Phase 0
-    Spec sign-off & schema approval     :p0, 2026-06-09, 10d
+    Spec sign-off and schema approval   :p0, 2026-06-09, 10d
 
-    section Phase 1 — Foundation
-    L0 connectors + staging             :p1a, 2026-06-16, 14d
-    L2 feature job (34 cols)            :p1b, after p1a, 10d
-    L3 rule-based scoring               :p1c, after p1b, 10d
-    Phase 1 exit review                 :milestone, p1exit, after p1c, 0d
+    section Phase 1 Foundation
+    L0 connectors and staging           :p1a, 2026-06-16, 14d
+    L2 feature job 34 cols              :p1b, 2026-06-30, 10d
+    L3 rule-based scoring               :p1c, 2026-07-10, 10d
+    Phase 1 exit review                 :milestone, p1exit, 2026-07-20, 0d
 
-    section Phase 2 — ML
-    Label generation job                :p2a, after p1exit, 14d
-    Model training (4 outcomes)         :p2b, after p2a, 14d
-    Inference pipeline                  :p2c, after p2b, 7d
-    Phase 2 exit review                 :milestone, p2exit, after p2c, 0d
+    section Phase 2 ML
+    Label generation job                :p2a, 2026-07-21, 14d
+    Model training 4 outcomes           :p2b, 2026-08-04, 14d
+    Inference pipeline                  :p2c, 2026-08-18, 7d
+    Phase 2 exit review                 :milestone, p2exit, 2026-08-25, 0d
 
-    section Phase 3 — Shadow
-    CRS v2 composite + shadow analytics :p3a, after p2exit, 7d
-    Narrative API + patterns            :p3b, after p3a, 7d
-    Phase 3 exit review                 :milestone, p3exit, after p3b, 0d
+    section Phase 3 Shadow
+    CRS v2 composite shadow analytics   :p3a, 2026-08-26, 7d
+    Narrative API and patterns          :p3b, 2026-09-02, 7d
+    Phase 3 exit review                 :milestone, p3exit, 2026-09-09, 0d
 
-    section Phase 4 — GA
-    Cutover + monitoring                :p4a, after p3exit, 14d
-    L1 API production                   :p4b, after p3exit, 21d
-    Production GA                       :milestone, ga, after p4b, 0d
+    section Phase 4 GA
+    Cutover and monitoring              :p4a, 2026-09-10, 14d
+    L1 API production                   :p4b, 2026-09-10, 21d
+    Production GA                       :milestone, ga, 2026-10-01, 0d
 
-    section Phase 5 — Expansion (parallel)
-    Wave A: lifestyle + games           :p5a, 2026-07-14, 28d
-    Wave B: intake forms                :p5b, after p5a, 28d
-    Wave C: PHQ-9 / trauma / ADHD       :p5c, after p5b, 28d
-    Wave D: biomarkers + therapist      :p5d, after p5c, 56d
-    Wave E: journal NLP                 :p5e, after p5a, 56d
-    feature_v2.0.0 complete             :milestone, p5done, after p5d, 0d
+    section Phase 5 Expansion parallel
+    Wave A lifestyle and games          :p5a, 2026-07-14, 28d
+    Wave B intake forms                 :p5b, 2026-08-11, 28d
+    Wave C PHQ-9 trauma ADHD            :p5c, 2026-09-08, 28d
+    Wave D biomarkers and therapist     :p5d, 2026-10-06, 56d
+    Wave E journal NLP                  :p5e, 2026-07-14, 56d
+    feature v2 complete                 :milestone, p5done, 2026-12-01, 0d
 ```
 
 *Adjust start dates to your program kickoff. Diagram uses illustrative June 2026 anchors.*
@@ -388,7 +388,7 @@ flowchart LR
     P2 --> P3[Phase 3 Shadow]
     P3 --> P4[Phase 4 GA]
     P1 --> P5[Phase 5 Wave A]
-    P5 --> P5B[Phase 5 Waves B–E]
+    P5 --> P5B[Phase 5 Waves B to E]
 
     P1 -.->|L0 patterns| P5
     P4 -.->|GA does not block| P5
