@@ -16,7 +16,8 @@
 |----------|----------|
 | **Product, Clinical, Leadership** | [Development-Roadmap-Stakeholder.md](./Development-Roadmap-Stakeholder.md) — plain-language timeline, user outcomes, milestones |
 | **Engineering, Data, ML** | [Development-Roadmap.md](./Development-Roadmap.md) — standard schedule (11-week GA + ongoing Phase 5) |
-| **4-month all-phases** | [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) — compressed 17-week plan, **8–9 engineers** |
+| **4-month all-phases (engine)** | [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) — compressed 17-week plan, **8–9 engineers** |
+| **Complete Part1 (full stack)** | [Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md) — engine + backend + frontend, **~16–19 people / 6 months** |
 
 ```bash
 pandoc final/MindPeers-Engine-Master-Production-Spec.md \

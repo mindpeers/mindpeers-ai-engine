@@ -1,9 +1,31 @@
 # MindPeers Cognitive Readiness Engine — Stakeholder Roadmap
 
 **Audience:** Product, Clinical, Leadership, Design, Operations  
-**Version:** 1.1.0  
+**Version:** 1.2.0  
 **Date:** 2026-06-05  
-**Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) (standard plan) · [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) (all phases in 4 months)
+**Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) · [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) (engine only) · **[Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md)** (backend + frontend + engine — **complete Part1**)
+
+---
+
+## Complete Part1 (backend + frontend + engine)
+
+If you need **everything** — all screens, app APIs, mobile/web UI, and the scoring engine:
+
+| Stack | What | Team (6-month realistic) |
+|-------|------|--------------------------|
+| **Data & scoring engine** | Ingestion, ML, CRS, report API | 6–7 engineers |
+| **Platform backend** | Check-in, forms, games, therapy, event gateway | 3 engineers |
+| **Frontend** | Mobile + web — all 12 Part1 screens + report dashboard | 4–5 engineers |
+| **Design + QA** | Figma, E2E tests | 3–4 people |
+| **Total** | **Complete Part1** | **~16–19 people** |
+
+| Deadline | Feasible? |
+|----------|-----------|
+| **6 months** | **Yes** — recommended plan |
+| **4 months everything** | Only with **~20 people** or reduced scope |
+| **4 months** | Engine + **Report UI only** (~12 people); remaining screens months 5–7 |
+
+Full screen catalog, workstreams, hours, and definition of done: **[Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md)**
 
 ---
 
@@ -418,12 +440,17 @@ gantt
 
 ---
 
-## What we are *not* building in this program
+## What we are *not* building in the *engine-only* program
 
-| Out of scope | Why |
-|--------------|-----|
-| Mobile UI implementation | Separate product track — consumes our report API |
-| Real-time score on every tap | Daily batch is simpler, auditable, and sufficient for v1 |
+The documents [Development-Roadmap.md](./Development-Roadmap.md) and [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) cover **Stack A** (data & scoring engine) only.
+
+For **complete Part1 including mobile/web UI and platform backend**, see **[Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md)**.
+
+| Out of scope in engine-only docs | Covered in full-stack doc |
+|----------------------------------|---------------------------|
+| Mobile / web UI implementation | 12 product screens + report dashboard |
+| App backend services (check-in, forms, games) | Platform backend workstream |
+| Real-time score on every tap | Daily batch (both plans) |
 | AI chat / open-ended coaching | Separate LLM program |
 | Full CogniArt cognitive testing | Future phase |
 
@@ -497,7 +524,8 @@ gantt
 
 | Document | Who should read it |
 |----------|-------------------|
-| [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) | Engineering leads — 4-month staffing detail |
+| [Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md) | **Complete Part1** — engine + backend + frontend |
+| [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) | Engineering leads — 4-month engine-only staffing |
 | [Development-Roadmap.md](./Development-Roadmap.md) | Engineering, Data, ML — technical schedule |
 | [MindPeers-Engine-Master-Production-Spec.md](./MindPeers-Engine-Master-Production-Spec.md) | Deep dive for technical leads |
 | [Engine Part1.docx](../Engine%20Part1.docx) | Product source — pillar inputs and weights |
@@ -518,6 +546,7 @@ pandoc final/Development-Roadmap-Stakeholder.md \
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.1 | 2026-06-05 | Link to full-stack Part1 roadmap (backend + frontend + engine) |
 | 1.1.0 | 2026-06-05 | Resource distribution section (standard vs 4-month staffing, hours, ramp) |
 | 1.0.2 | 2026-06-05 | Link to 4-month accelerated all-phases plan |
 | 1.0.1 | 2026-06-05 | Fix Mermaid Gantt syntax for GitHub renderer |

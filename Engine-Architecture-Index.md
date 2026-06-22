@@ -46,7 +46,8 @@ Single entry point for all production specifications, implementation artifacts, 
 
 | Layer | Primary spec | Status | Key outputs |
 |-------|-------------|--------|-------------|
-| **Roadmap (4-month all phases)** | [final/Development-Roadmap-4Month-Accelerated.md](./final/Development-Roadmap-4Month-Accelerated.md) | **8–9 engineers**, 17 weeks, 70/70 Part1 |
+| **Full stack Part1** | [final/Engine-Part1-Full-Stack-Development-Roadmap.md](./final/Engine-Part1-Full-Stack-Development-Roadmap.md) | Engine + platform backend + mobile/web — **complete Part1** |
+| **Roadmap (4-month all phases)** | [final/Development-Roadmap-4Month-Accelerated.md](./final/Development-Roadmap-4Month-Accelerated.md) | **8–9 engineers**, engine only, 17 weeks |
 | **Roadmap (stakeholder)** | [final/Development-Roadmap-Stakeholder.md](./final/Development-Roadmap-Stakeholder.md) | **Non-technical** — user outcomes, milestones, FAQ |
 | **Roadmap (technical)** | [final/Development-Roadmap.md](./final/Development-Roadmap.md) | **Development schedule** — phases, gates, team matrix |
 | **Program** | [final/MindPeers-Engine-Master-Production-Spec.md](./final/MindPeers-Engine-Master-Production-Spec.md) | **Single combined master spec (PDF export)** |
