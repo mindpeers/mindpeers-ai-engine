@@ -46,6 +46,7 @@ Single entry point for all production specifications, implementation artifacts, 
 
 | Layer | Primary spec | Status | Key outputs |
 |-------|-------------|--------|-------------|
+| **Roadmap** | [final/Development-Roadmap.md](./final/Development-Roadmap.md) | **Development schedule** — phases, milestones, waves, gates |
 | **Program** | [final/MindPeers-Engine-Master-Production-Spec.md](./final/MindPeers-Engine-Master-Production-Spec.md) | **Single combined master spec (PDF export)** |
 | **Program** | [final/README.md](./final/README.md) | **TRD + HLD per phase** | Phase 01–05 TRD/HLD, master program docs |
 | **Part1 binding** | [final/Engine-Part1-Full-Attribute-Binding-Spec.md](./final/Engine-Part1-Full-Attribute-Binding-Spec.md) | **Mandatory 100%** | 70 attributes → state + trajectory |
@@ -158,6 +159,7 @@ python scripts/validate_dataset_columns.py Engine-POC-Sample-Dataset.xlsx
 
 | Date | Change |
 |------|--------|
+| 2026-06-05 | Added [Development-Roadmap.md](./final/Development-Roadmap.md) — program development schedule |
 | 2026-06-05 | Added [MindPeers-Engine-Master-Production-Spec.md](./final/MindPeers-Engine-Master-Production-Spec.md) — single combined PDF-style master doc |
 | 2026-06-05 | Data Ingestion v1.1.0 — Part1-complete event catalog (Appendix F); L2 §11 full lineage |
 | 2026-06-05 | Added `final/` TRD + HLD package (Phases 01–05 + master program) |

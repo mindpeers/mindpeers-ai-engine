@@ -10,6 +10,10 @@
 
 **[MindPeers-Engine-Master-Production-Spec.md](./MindPeers-Engine-Master-Production-Spec.md)** — combined program spec for stakeholder review and PDF export. Consolidates architecture, requirements, all five layers, phases, and the full 70-attribute binding in one document.
 
+## Development roadmap
+
+**[Development-Roadmap.md](./Development-Roadmap.md)** — program schedule of record: phase timeline, week-by-week milestones, Phase 5 waves, team ownership, gates, risks, and Gantt diagram.
+
 ```bash
 pandoc final/MindPeers-Engine-Master-Production-Spec.md \
   -o final/MindPeers-Engine-Master-Production-Spec.pdf \
