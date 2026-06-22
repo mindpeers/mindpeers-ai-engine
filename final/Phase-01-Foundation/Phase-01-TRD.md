@@ -143,6 +143,7 @@ Establish the **data foundation and rule-based scoring layer** so the product ca
 - Narrative API blocks (Phase 3)
 - v1.1 events: games, forms, biomarkers (Phase 5)
 - L1 public API GA (Phase 4)
+- **Full Engine Part1 attribute catalog** — only **18/70** W1 attrs live; remaining 52 attrs deferred to Phase 5 with weight renormalization (see [Engine-Part1-Full-Attribute-Binding-Spec.md](../Engine-Part1-Full-Attribute-Binding-Spec.md))
 
 ---
 

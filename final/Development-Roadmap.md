@@ -1,24 +1,42 @@
 # MindPeers Cognitive Readiness Engine — Development Roadmap
 
 **Document ID:** MP-ENGINE-ROADMAP-001  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** For review  
 **Date:** 2026-06-05  
 **Horizon:** 11+ weeks to GA; Phase 5 ongoing  
-**Related:** [Master Production Spec](./MindPeers-Engine-Master-Production-Spec.md) · [Phase TRDs](./README.md)
+**Related:** [Master Production Spec](./MindPeers-Engine-Master-Production-Spec.md) · [Part1 Binding Spec](./Engine-Part1-Full-Attribute-Binding-Spec.md) · [Phase TRDs](./README.md)
 
 ---
 
 ## 1. Roadmap at a glance
 
-| Phase | Name | Calendar | Duration | Primary outcome | Go-live signal |
-|-------|------|----------|----------|-----------------|----------------|
-| **0** | Spec & sign-off | Pre-week 1 | 1–2 weeks | Approved specs, schemas, clinical thresholds | PRD + specs signed |
-| **1** | Foundation | Weeks 1–4 | 4 weeks | L0 + L2 + L3 rule-based scores | Batch pipeline live in staging |
-| **2** | ML labels & training | Weeks 5–8 | 4 weeks | 4 outcome models in registry | AUC gates passed |
-| **3** | CRS v2 shadow + narrative | Weeks 9–10 | 2 weeks | Dual scores + five questions API | Product/clinical shadow QA |
-| **4** | Production cutover | Week 11+ | 2–4 weeks | `crs_primary=v2`, L1 API GA | Production traffic |
-| **5** | v1.1 expansion | Parallel from Week 5 | 16–28 weeks | 70/70 Part1 attributes | `feature_v2.0.0` |
+> **Part1 clarification:** Engine Part1.docx defines **70 attributes**, **category weights**, and **scoring formulas**. Foundation (Phase 1) ships the **full formula framework** with **18/70 attributes live** (~26%). Remaining inputs are Phase 5. GA (Phase 4) does **not** require 100% Part1 data — only the scoring + ML stack.
+
+| Phase | Name | Calendar | Duration | Primary outcome | Part1 coverage | Go-live signal |
+|-------|------|----------|----------|-----------------|----------------|----------------|
+| **0** | Spec & sign-off | Pre-week 1 | 1–2 weeks | Approved specs, schemas, clinical thresholds | Spec: 70/70 defined | PRD + specs signed |
+| **1** | Foundation | Weeks 1–4 | 4 weeks | L0 + L2 + L3 rule-based scores | **Framework + 18/70 attrs** | Batch pipeline live in staging |
+| **2** | ML labels & training | Weeks 5–8 | 4 weeks | 4 outcome models in registry | 18/70 (unchanged) | AUC gates passed |
+| **3** | CRS v2 shadow + narrative | Weeks 9–10 | 2 weeks | Dual scores + five questions API | 18/70 + narrative | Product/clinical shadow QA |
+| **4** | Production cutover | Week 11+ | 2–4 weeks | `crs_primary=v2`, L1 API GA | 18/70 at GA¹ | Production traffic |
+| **5** | v1.1 expansion | Parallel from Week 5 | 16–28 weeks | All Part1 inputs ingested + scored | **70/70 attrs** | `feature_v2.0.0` |
+
+¹ GA ships with W1 inputs; missing Part1 blocks renormalize per binding spec P3. Phase 5 completes data coverage without blocking GA.
+
+### Part1 coverage by phase (quick reference)
+
+| What | Phase 1 | Phases 2–4 | Phase 5 |
+|------|---------|------------|---------|
+| Pillar category weights (Tables 2–5) | ✅ Implemented | ✅ | ✅ Full blocks populated |
+| CRS readiness 5-category weights (Table 6) | ✅ Renormalized | ✅ | ✅ All categories live |
+| 7 trend metrics | ✅ Minimal v1 formulas | ✅ | ✅ Full §8.9 bindings |
+| Risk cap (`core_om_risk`) | ✅ | ✅ | ✅ |
+| Attribute **data** ingested | 18 / 70 | 18 / 70 | **70 / 70** |
+| Forms block (A44–A64) | ❌ Deferred | ❌ | ✅ Wave B |
+| Games, lifestyle, biomarkers | ❌ Deferred | ❌ | ✅ Waves A, C, D |
+| Therapist sheet (A68–A70) | ❌ Deferred | ❌ | ✅ Wave D |
+| Five narrative questions | ❌ | ✅ Phase 3 | ✅ |
 
 **Critical path:** Phase 0 → 1 → 2 → 3 → 4 (sequential, ~11 weeks minimum to GA)
 
@@ -87,6 +105,7 @@ Week:  1    2    3    4    5    6    7    8    9   10   11   12+
 
 | Layer | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 5 |
 |-------|---------|---------|---------|---------|---------|
+| **Part1** | Framework + **18/70** attrs | 18/70 | + narrative | GA on 18/70¹ | **70/70** complete |
 | **L0** | v1 connectors, staging | — | — | Prod hardening | v1.1 events (+5 types) |
 | **L2** | 34 features (`v1.0.0`) | PIT backfill for ML | — | — | +52 cols (`v2.0.0`) |
 | **L4** | — | Labels + 4 models + inference | Inference live | Model monitoring | Retrain on v2 features |
@@ -116,7 +135,31 @@ Week:  1    2    3    4    5    6    7    8    9   10   11   12+
 
 **Goal:** Ship rule-based engine — pillars, CRS readiness, 7 trends — without ML.
 
-**Headline score:** `crs_readiness_score` · **Part1 coverage:** ~18/70 attributes (W1 wave)
+**Headline score:** `crs_readiness_score`
+
+### Part1 scope in Foundation — framework yes, full catalog no
+
+| Delivered in Phase 1 | Not in Phase 1 (Phase 5) |
+|----------------------|--------------------------|
+| Part1 **scoring formulas** (pillars, CRS readiness, 7 trends) | 52 remaining attributes (A08–A10, A12, A14–A26, A30–A42, A44–A70) |
+| Part1 **category weights** with renormalization when blocks null | Forms block (15% of CRS readiness) |
+| **18/70 attributes** with live L0 → L2 → L3 path | Games, lifestyle check-ins, biomarkers |
+| Risk cap on all display scores | Full trend bindings (§8.9) |
+| Cold start + web-only paths | Therapist sheet (A68–A70) |
+
+**Live attributes (W1 wave):** A01–A07, A11, A13, A27–A29, A37, A43
+
+| ID | Name | L0 event |
+|----|------|----------|
+| A01–A06 | CORE-OM (overall, functioning, problems, wellbeing, risk, delta) | `assessment_completed` |
+| A07 | GAD-7 anxiety | `assessment_completed` |
+| A11 | Sleep | `sleep_session` |
+| A13 | HRV | `heart_rate_daily` |
+| A27–A29 | Mood, motivation, confidence | `mood_checkin`, `motivation_checkin`, `confidence_checkin` |
+| A37 | App engagement | `app_session` |
+| A43 | Therapy attendance | `session_attended` / `session_missed` |
+
+**Stakeholder messaging:** Phase 1 = *"Part1 engine live on core clinical + check-in inputs."* Not *"Part1.docx complete."*
 
 ### Week-by-week plan
 
@@ -144,6 +187,8 @@ Week:  1    2    3    4    5    6    7    8    9   10   11   12+
 - [ ] Risk cap: `core_om_risk ≥ 0.70` → all scores ≤ 40
 - [ ] Web-only user scores without wearable nulls breaking pipeline
 - [ ] Clinical sign-off on risk cap behaviour
+- [ ] **Part1 renormalization verified:** user with null Forms/Lifestyle blocks still gets valid pillar + readiness scores
+- [ ] **Explicitly out of scope documented:** 52 Part1 attrs deferred to Phase 5 (no false "Part1 complete" claim)
 
 **TRD/HLD:** [Phase-01-Foundation/](./Phase-01-Foundation/)
 
@@ -153,7 +198,7 @@ Week:  1    2    3    4    5    6    7    8    9   10   11   12+
 
 **Goal:** Build offline ML foundation for CRS v2 — labels, four models, batch inference.
 
-**Prerequisite:** Phase 1 exit · **CRS headline:** still readiness (inference runs but not primary)
+**Prerequisite:** Phase 1 exit · **CRS headline:** still readiness (inference runs but not primary) · **Part1:** 18/70 (unchanged)
 
 ### Week-by-week plan
 
@@ -190,7 +235,7 @@ Week:  1    2    3    4    5    6    7    8    9   10   11   12+
 
 **Goal:** Integrate CRS v2 in shadow mode; ship five-question narrative API.
 
-**User-facing headline:** still readiness · **Internal/staging:** both scores visible
+**User-facing headline:** still readiness · **Internal/staging:** both scores visible · **Part1:** 18/70 attrs + **five narrative questions** (Part1 product screens)
 
 ### Week-by-week plan
 
@@ -225,7 +270,7 @@ Week:  1    2    3    4    5    6    7    8    9   10   11   12+
 
 **Goal:** Promote CRS v2 as primary; launch production L1 API; operationalize monitoring.
 
-**Duration:** 2–4 weeks (includes soft launch + hardening)
+**Duration:** 2–4 weeks (includes soft launch + hardening) · **Part1 data:** still 18/70 at GA — Phase 5 continues in parallel
 
 ### Cutover sequence
 
@@ -362,15 +407,17 @@ flowchart LR
 
 ## 12. Milestone summary (executive)
 
-| # | Milestone | Target week | Success signal |
-|---|-----------|-------------|----------------|
-| M0 | Program kickoff | Week 0 | Specs signed, environments ready |
-| M1 | **First scores in staging** | Week 4 | Pillars + readiness + trends for test cohort |
-| M2 | **Models in registry** | Week 8 | 4 outcome models pass AUC gates |
-| M3 | **Shadow mode live** | Week 10 | Dual CRS + narrative in staging |
-| M4 | **Production GA** | Week 11–13 | `crs_primary=v2`, API live, monitoring on |
-| M5 | **Part1 50% inputs** | Week 12–16 | Waves A + B complete |
-| M6 | **Part1 100% inputs** | Week 24–32 | `feature_v2.0.0`, full trend bindings |
+| # | Milestone | Target week | Part1 | Success signal |
+|---|-----------|-------------|-------|----------------|
+| M0 | Program kickoff | Week 0 | Spec 70/70 | Specs signed, environments ready |
+| M1 | **First scores in staging** | Week 4 | **18/70** framework live | Pillars + readiness + trends for test cohort |
+| M2 | **Models in registry** | Week 8 | 18/70 | 4 outcome models pass AUC gates |
+| M3 | **Shadow mode live** | Week 10 | 18/70 + narrative | Dual CRS + five questions in staging |
+| M4 | **Production GA** | Week 11–13 | 18/70 at launch¹ | `crs_primary=v2`, API live, monitoring on |
+| M5 | **Part1 50% inputs** | Week 12–16 | ~35/70 | Waves A + B complete |
+| M6 | **Part1 100% inputs** | Week 24–32 | **70/70** | `feature_v2.0.0`, full trend bindings |
+
+¹ Production GA intentionally does not wait for M6. Scores renormalize until Phase 5 completes.
 
 ---
 
@@ -384,6 +431,7 @@ flowchart LR
 | Connector outage | Medium | Data gaps | Watermarks + completeness score + stale flag | Platform |
 | Model degradation post-GA | Low | Wrong CRS | Weekly AUC; rollback `model_bundle_version` | ML |
 | Phase 5 scope creep | Medium | Delayed GA | Phase 5 strictly parallel; GA on Phase 1–4 only | Eng lead |
+| **"Part1 complete" misread at Phase 1** | **High** | **Stakeholder trust** | **Roadmap §1 Part1 column; explicit 18/70 messaging** | **Product + Eng lead** |
 
 ---
 
@@ -436,6 +484,7 @@ flowchart LR
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-06-05 | Part1 coverage column; Foundation = framework + 18/70 (not full Part1); GA decoupled from M6 |
 | 1.0.0 | 2026-06-05 | Initial development roadmap — phases 0–5, waves, gates, team matrix |
 
 ---

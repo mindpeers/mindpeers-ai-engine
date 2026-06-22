@@ -32,14 +32,14 @@ Each phase is independently reviewable by Engineering, Data Platform, ML, Produc
 
 ## Document index
 
-| Phase | Timeline | TRD | HLD | Layers |
-|-------|----------|-----|-----|--------|
-| **0 — Master** | — | [00-Master-Program-TRD.md](./00-Master-Program-TRD.md) | [00-Master-Program-HLD.md](./00-Master-Program-HLD.md) | All |
-| **1 — Foundation** | Weeks 1–4 | [Phase-01-TRD.md](./Phase-01-Foundation/Phase-01-TRD.md) | [Phase-01-HLD.md](./Phase-01-Foundation/Phase-01-HLD.md) | L0, L2, L3 (rule-based) |
-| **2 — ML Labels & Training** | Weeks 5–8 | [Phase-02-TRD.md](./Phase-02-ML-Labels-Training/Phase-02-TRD.md) | [Phase-02-HLD.md](./Phase-02-ML-Labels-Training/Phase-02-HLD.md) | L4 labels, model training |
-| **3 — CRS v2 Shadow & Narrative** | Weeks 9–10 | [Phase-03-TRD.md](./Phase-03-CRS-v2-Shadow-Narrative/Phase-03-TRD.md) | [Phase-03-HLD.md](./Phase-03-CRS-v2-Shadow-Narrative/Phase-03-HLD.md) | L3 v2 shadow, L1 narrative |
-| **4 — Production Cutover** | Week 11+ | [Phase-04-TRD.md](./Phase-04-Production-Cutover/Phase-04-TRD.md) | [Phase-04-HLD.md](./Phase-04-Production-Cutover/Phase-04-HLD.md) | L3 primary v2, L1 API GA |
-| **5 — v1.1 Expansion** | Ongoing | [Phase-05-TRD.md](./Phase-05-v1.1-Expansion/Phase-05-TRD.md) | [Phase-05-HLD.md](./Phase-05-v1.1-Expansion/Phase-05-HLD.md) | **100% Part1 attributes** → state + trends |
+| Phase | Timeline | TRD | HLD | Layers | Part1 |
+|-------|----------|-----|-----|--------|-------|
+| **0 — Master** | — | [00-Master-Program-TRD.md](./00-Master-Program-TRD.md) | [00-Master-Program-HLD.md](./00-Master-Program-HLD.md) | All | Spec: 70/70 defined |
+| **1 — Foundation** | Weeks 1–4 | [Phase-01-TRD.md](./Phase-01-Foundation/Phase-01-TRD.md) | [Phase-01-HLD.md](./Phase-01-Foundation/Phase-01-HLD.md) | L0, L2, L3 (rule-based) | **Framework + 18/70 attrs** |
+| **2 — ML Labels & Training** | Weeks 5–8 | [Phase-02-TRD.md](./Phase-02-ML-Labels-Training/Phase-02-TRD.md) | [Phase-02-HLD.md](./Phase-02-ML-Labels-Training/Phase-02-HLD.md) | L4 labels, model training | 18/70 |
+| **3 — CRS v2 Shadow & Narrative** | Weeks 9–10 | [Phase-03-TRD.md](./Phase-03-CRS-v2-Shadow-Narrative/Phase-03-TRD.md) | [Phase-03-HLD.md](./Phase-03-CRS-v2-Shadow-Narrative/Phase-03-HLD.md) | L3 v2 shadow, L1 narrative | 18/70 + narrative |
+| **4 — Production Cutover** | Week 11+ | [Phase-04-TRD.md](./Phase-04-Production-Cutover/Phase-04-TRD.md) | [Phase-04-HLD.md](./Phase-04-Production-Cutover/Phase-04-HLD.md) | L3 primary v2, L1 API GA | 18/70 at GA |
+| **5 — v1.1 Expansion** | Ongoing | [Phase-05-TRD.md](./Phase-05-v1.1-Expansion/Phase-05-TRD.md) | [Phase-05-HLD.md](./Phase-05-v1.1-Expansion/Phase-05-HLD.md) | **100% Part1 attributes** | **70/70 complete** |
 
 | **Binding (all phases)** | — | [Engine-Part1-Full-Attribute-Binding-Spec.md](./Engine-Part1-Full-Attribute-Binding-Spec.md) | 70 attrs → pillars + CRS + 7 trends |
 
