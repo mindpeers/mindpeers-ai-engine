@@ -3,7 +3,22 @@
 **Audience:** Product, Clinical, Leadership, Design, Operations  
 **Version:** 1.0.0  
 **Date:** 2026-06-05  
-**Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) (for Engineering & Data teams)
+**Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) (standard plan) · [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) (all phases in 4 months)
+
+---
+
+## 4-month program (all phases)
+
+If leadership requires **full launch + all 70 data inputs in 4 months**:
+
+| Item | Requirement |
+|------|-------------|
+| **Team** | **8–9 engineers** (6 h/day, 5 days/week) |
+| **Week 10** | Public launch with core inputs (~26%) |
+| **Week 17** | **100% Part1 inputs** live |
+| **Key condition** | Phase 5 expansion runs **in parallel from week 3** — not after launch |
+
+Full week-by-week plan, squad structure, and risks: **[Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md)**
 
 ---
 
@@ -341,6 +356,7 @@ pandoc final/Development-Roadmap-Stakeholder.md \
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.2 | 2026-06-05 | Link to 4-month accelerated all-phases plan |
 | 1.0.1 | 2026-06-05 | Fix Mermaid Gantt syntax for GitHub renderer |
 | 1.0.0 | 2026-06-05 | Initial non-technical stakeholder roadmap |
 
