@@ -6,6 +6,18 @@
 
 ---
 
+## Single master document (PDF export)
+
+**[MindPeers-Engine-Master-Production-Spec.md](./MindPeers-Engine-Master-Production-Spec.md)** — combined program spec for stakeholder review and PDF export. Consolidates architecture, requirements, all five layers, phases, and the full 70-attribute binding in one document.
+
+```bash
+pandoc final/MindPeers-Engine-Master-Production-Spec.md \
+  -o final/MindPeers-Engine-Master-Production-Spec.pdf \
+  --toc --toc-depth=3 -V geometry:margin=1in
+```
+
+---
+
 ## Purpose
 
 This folder contains **complete Technical Requirements Documents (TRD)** and **High-Level Design documents (HLD)** for each implementation phase of the MindPeers scoring engine.
