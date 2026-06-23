@@ -1,7 +1,7 @@
 # MindPeers Cognitive Readiness Engine — Stakeholder Roadmap
 
 **Audience:** Product, Clinical, Leadership, Design, Operations  
-**Version:** 1.2.1  
+**Version:** 1.3.0  
 **Date:** 2026-06-24  
 **Program kickoff:** 24 June 2026  
 **Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) · [Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md) (backend + frontend + engine — **complete Part1**)
@@ -162,6 +162,185 @@ Clinical team signs off on risk thresholds before we go live.
 
 ---
 
+## Clinical team sign-off checklist
+
+Use this checklist at each gate. **Signatory:** Clinical lead (or delegate). **Reference:** [CRS Unified v3 §4.3 & Appendix B.1](../CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md#appendix-b1--clinical-label-decision-tree-for-sign-off).
+
+### How to use
+
+| Gate | Target week | Dates (2026) | Outcome |
+|------|-------------|--------------|---------|
+| **G1 — Pre-build** | 1 | 24–30 Jun | Build may start |
+| **G2 — Risk cap QA** | 4 | ~21 Jul | Staging scores approved |
+| **G3 — ML labels** | 6 | ~4 Aug | Models may train |
+| **G4 — Narrative & shadow** | 7 | 5–14 Aug | Report copy approved |
+| **G5 — Launch** | 8 | from 15 Aug | Production go-live |
+| **G6 — Full inputs** | 8–10 | Jul–Aug | 70/70 validation (if in scope) |
+
+---
+
+### G1 — Pre-build (Week 1: 24–30 June 2026)
+
+**Thresholds & rules**
+
+- [ ] **CORE-OM risk cap** — `core_om_risk ≥ 0.70` caps all display scores at **40** (confirm or change threshold)
+- [ ] **Risk relapse threshold** — normalized risk **≥ 0.70** at follow-up counts as relapse signal (L3)
+- [ ] **CORE-OM total MCID** — default **5 raw points** for meaningful improvement/worsening (R1, L1)
+- [ ] **CORE-OM subscale MCID** — default **0.10** normalized for problems / wellbeing / functioning (R2–R4, L2)
+- [ ] **GAD-7 MCID** — default **4 raw points** for secondary recovery path and relapse (R4 confirmer, L5)
+- [ ] **Assessment follow-up window** — **[T+21d, T+45d]** around 30-day horizon (confirm cadence with product)
+- [ ] **Direction rule** — lower CORE-OM total = improvement; documented for ML and reporting teams
+
+**Safety & governance**
+
+- [ ] **Escalation workflow** — who is contacted when risk is elevated; response SLA agreed with operations
+- [ ] **No diagnosis rule** — all user-facing copy uses probabilistic language only (“may”, “suggests”); no diagnostic labels
+- [ ] **Scores are not therapy** — disclaimer that CRS/readiness is supportive information, not a clinical decision
+- [ ] **Crisis pathway** — `form_crisis_marker` and high `core_om_risk` routes to human support (not in-app only)
+
+**Instruments & data**
+
+- [ ] **CORE-OM** — approved for ingestion, subscales used (wellbeing, problems, functioning, risk)
+- [ ] **GAD-7** — approved as anxiety input and label confirmer
+- [ ] **PHQ-9, PTSD, ASRS** — approved for Phase 5 / enrichment wave (if in 2.5-month scope)
+- [ ] **Biomarker consent** — policy for lab results before Wave D (if in scope)
+
+**Sign-off G1**
+
+| Field | Value |
+|-------|-------|
+| Clinical lead | _________________________ |
+| Date | _________________________ |
+| Notes / threshold changes | _________________________ |
+
+---
+
+### G2 — Risk cap QA (Week 4: ~21 July 2026)
+
+**Staging verification**
+
+- [ ] Test user with `core_om_risk = 0.72` → **all** pillar, CRS, and trend display scores **≤ 40**
+- [ ] Risk-elevated user sees **escalation messaging**, not positive “high readiness” copy
+- [ ] `risk_elevated = true` in API when threshold met
+- [ ] Risk cap applies to **both** same-day readiness and trajectory readiness (when live)
+- [ ] Web-only user (no wearable) — scores still compute; no false risk signals from missing data
+- [ ] Cold-start user — cohort prior behaviour acceptable; confidence tier shows “Limited” where appropriate
+
+**Sign-off G2**
+
+| Field | Value |
+|-------|-------|
+| Clinical lead | _________________________ |
+| Date | _________________________ |
+
+---
+
+### G3 — ML outcome labels (Week 6: ~4 August 2026)
+
+**Label definitions (training only — not shown to users)**
+
+- [ ] **Recovery rules R1–R4** reviewed — subscale-aware, not total-score only ([Appendix B.1](../CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md#appendix-b1--clinical-label-decision-tree-for-sign-off))
+- [ ] **Relapse rules L1–L5** reviewed — relapse evaluated **before** recovery; mutually exclusive
+- [ ] **Recovery safety guard** — no recovery label if `core_om_risk ≥ 0.70` at follow-up
+- [ ] **Censoring policy** — no follow-up assessment → label = null (not 0); acceptable training exclusion
+- [ ] **GAD-7 secondary path** — acceptable when CORE-OM follow-up missing; flagged `label_confidence=secondary`
+- [ ] **Dropout label** — `user_churned` + **30-day** inactivity within **60-day** horizon
+- [ ] **Engagement loss** — **≥50%** drop vs 30-day baseline engagement
+- [ ] **Censoring rate** — reviewed monthly target **< 40%** for clinical models at 30d+ maturity
+- [ ] **`label_version`** — `label_v2.0.0` recorded in model registry with signed thresholds
+
+**Sign-off G3**
+
+| Field | Value |
+|-------|-------|
+| Clinical lead | _________________________ |
+| Date | _________________________ |
+
+---
+
+### G4 — Narrative & shadow report (Week 7: 5–14 August 2026)
+
+**Five report questions (staging)**
+
+- [ ] **Where am I now?** — accurate, non-diagnostic, reflects band (Low / Moderate / High)
+- [ ] **Why is it like this?** — drivers use probabilistic language; no invented causes
+- [ ] **What should I be aware of?** — trend warnings appropriate severity (info / warning / critical)
+- [ ] **What is my risk?** — `relapse_probability` and `core_om_risk` explained without alarmism
+- [ ] **What should I do next?** — actions safe and appropriate (check-in, sleep, contact therapist)
+
+**Risk-elevated narrative override**
+
+- [ ] When `core_om_risk ≥ 0.70`, narrative switches to **escalation copy** (not standard positive framing)
+- [ ] `escalation_recommended = true` when policy requires human follow-up
+- [ ] **Contact therapist / support** is priority action when risk elevated
+
+**Dual scores (shadow period)**
+
+- [ ] Same-day readiness vs trajectory readiness — clinical team comfortable with both being visible internally
+- [ ] Large divergence (|v2 − readiness| > 20) — review process defined for outlier users
+
+**Sign-off G4**
+
+| Field | Value |
+|-------|-------|
+| Clinical lead | _________________________ |
+| Product (copy) | _________________________ |
+| Date | _________________________ |
+
+---
+
+### G5 — Production launch (Week 8+: from 15 August 2026)
+
+**Go-live**
+
+- [ ] **Trajectory readiness** as headline for mature users — clinical accepts maturity rules (readiness fallback for new users)
+- [ ] **Score meanings** — pillar definitions (Clarity, Emotional Balance, Resilience, Capacity) approved for app
+- [ ] **Trend arrows** — direction language (↑ improving / ↓ declining) clinically sensible
+- [ ] **Support runbook** — ops can answer “why did my score change?” without clinical ticket for every user
+- [ ] **Rollback** — clinical accepts `FORCE_CRS_PRIMARY=readiness` if model issues post-launch
+- [ ] **Monitoring** — quarterly clinical review of thresholds scheduled
+
+**Sign-off G5 (go / no-go)**
+
+| Field | Value |
+|-------|-------|
+| Clinical lead | _________________________ |
+| Product | _________________________ |
+| Date | _________________________ |
+| Decision | ☐ Go  ☐ No-go  ☐ Go with conditions: _______________ |
+
+---
+
+### G6 — New clinical inputs (Weeks 8–10 — enrichment parallel)
+
+*Complete if Phase 5 waves ship in 2.5-month plan.*
+
+- [ ] **PHQ-9 (depression)** — scoring and pillar contribution clinically appropriate
+- [ ] **Trauma / PTSD instrument** — handling and copy reviewed
+- [ ] **ADHD (ASRS)** — Clarity pillar use approved
+- [ ] **Intake form crisis markers** (`form_crisis_marker`) — escalation path tested
+- [ ] **Biomarker results** — reference ranges and consent; no diagnostic claims from lab values
+- [ ] **Journal sentiment** — NLP outputs framed as patterns, not clinical conclusions
+- [ ] **70/70 attribute binding** — clinical spot-check: sample users traceable input → score
+
+**Sign-off G6**
+
+| Field | Value |
+|-------|-------|
+| Clinical lead | _________________________ |
+| Date | _________________________ |
+
+---
+
+### Ongoing governance (post-launch)
+
+- [ ] **Quarterly threshold review** — MCID, risk cap, label rates
+- [ ] **Label drift alert** — ±5% change in positive label rate investigated with clinical
+- [ ] **Model AUC drop** — >5% weekly decline triggers clinical + ML review
+- [ ] **Reassessment cadence** — product nudges align with 21–45 day CORE-OM window
+
+---
+
 ## Timeline overview
 
 **Program kickoff:** **24 June 2026** (Week 1)  
@@ -215,7 +394,7 @@ gantt
 
 **We need from you:**
 
-- Clinical: approve risk cap and assessment change rules  
+- Clinical: complete **[G1 checklist](#g1--pre-build-week-1-24-30-june-2026)** (risk cap, MCIDs, escalation)  
 - Product: approve score labels and band copy (Low / Moderate / High)  
 
 ---
@@ -350,7 +529,7 @@ gantt
 **A:** Once daily, typically ready by early morning UTC. Yesterday’s activity is included in today’s report.
 
 **Q: Who owns clinical safety?**  
-**A:** Clinical lead approves risk thresholds, label definitions, and escalation copy. Engineering implements — Clinical governs.
+**A:** Clinical lead completes the [Clinical team sign-off checklist](#clinical-team-sign-off-checklist) at each gate (G1–G6). Engineering implements — Clinical governs.
 
 ---
 
@@ -358,7 +537,7 @@ gantt
 
 | Role | Phase 0 | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 5 |
 |------|---------|---------|---------|---------|---------|---------|
-| **Clinical** | Approve risk & labels | Risk cap QA | Label definitions | Narrative + risk copy | Launch sign-off | New input validation |
+| **Clinical** | **[G1](#g1--pre-build-week-1-24-30-june-2026)** thresholds | **[G2](#g2--risk-cap-qa-week-4-21-july-2026)** risk cap QA | **[G3](#g3--ml-outcome-labels-week-6-4-august-2026)** labels | **[G4](#g4--narrative--shadow-report-week-7-5-14-august-2026)** narrative | **[G5](#g5--production-launch-week-8-from-15-august-2026)** launch | **[G6](#g6--new-clinical-inputs-weeks-8-10--enrichment-parallel)** new inputs |
 | **Product** | Score meanings | Staging review | — | Copy + UX QA | Launch comms | Prioritize waves |
 | **Design** | — | Early layouts | — | Report polish | Production UI handoff | New input UX |
 | **Leadership** | Scope approval | — | — | Go/no-go | Launch | Investment for Phase 5 |
