@@ -167,27 +167,27 @@ Clinical team signs off on risk thresholds before we go live.
 
 ```mermaid
 gantt
-    title Stakeholder view - when capabilities land
+    title Stakeholder View - 2.5 Month Delivery Plan
     dateFormat YYYY-MM-DD
     axisFormat %b %d
 
     section Prepare
-    Approvals and clinical sign-off     :prep, 2026-06-09, 10d
+    Approvals and clinical sign-off      :prep, 2026-06-09, 7d
 
     section Build core report
-    First working scores internal       :core, 2026-06-16, 28d
+    First working scores internal        :core, 2026-06-16, 21d
 
     section Add intelligence
-    Prediction models trained           :ml, 2026-07-14, 28d
+    Prediction models trained            :ml, 2026-07-07, 14d
 
     section Validate
-    Dual scores and personalized text   :val, 2026-08-11, 14d
+    Dual scores and personalized text    :val, 2026-07-21, 10d
 
     section Launch
-    Public release                      :launch, 2026-08-25, 21d
+    Public release                       :launch, 2026-07-31, 14d
 
     section Enrich data parallel
-    More inputs games forms labs        :expand, 2026-07-14, 120d
+    More inputs games forms labs         :expand, 2026-06-23, 45d
 ```
 
 ---
