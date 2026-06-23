@@ -3,6 +3,8 @@
 **Audience:** Product, Clinical, Leadership, Design, Operations  
 **Version:** 1.2.0  
 **Date:** 2026-06-05  
+**Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) · [Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md)** (backend + frontend + engine — **complete Part1**)
+
 ---
 
 ## Complete Part1 (backend + frontend + engine)
