@@ -49,12 +49,12 @@ If leadership requires **full launch + all 70 data inputs in 2 months**:
 
 Two squads run **at the same time** from week 3:
 
-#### Core squad (2 people) — builds launch path
+#### Core squad (3-4 people) — builds launch path
 
 | Role | Count | Responsibility | Weeks active |
 |------|-------|----------------|--------------|
-| **Engineering lead** | 2 | Program integration, launch, scoring orchestration | 1–9 |
-| **Backend engineer** | 1 | Scores, report API, five questions, warnings | 1–9 |
+| **Engineering lead** | 1 | Program integration, launch, scoring orchestration | 1–9 |
+| **Backend engineer** | 2 | Scores, report API, five questions, warnings | 1–9 |
 | **Data engineer (platform)** | 1 | Core data pipes, daily rollups, feature pipeline | 1–9 |
 | **ML engineer** | 1 | Outcome labels, 4 prediction models, final model update (week 5) | 5–9 |
 | **DevOps** | 0.5–1 | Infrastructure, batch jobs, production monitoring | 9 |
