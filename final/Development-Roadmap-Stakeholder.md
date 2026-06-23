@@ -45,7 +45,7 @@ If leadership requires **full launch + all 70 data inputs in 2 months**:
 
 ---
 
-### Option 2-month plan (4 engineers)
+### 2-months plan (4 engineers)
 
 Two squads run **at the same time** from week 3:
 
