@@ -11,36 +11,31 @@
 
 If you need **everything** — all screens, app APIs, mobile/web UI, and the scoring engine:
 
-| Stack | What | Team (6-month realistic) |
+| Stack | What | Team |
 |-------|------|--------------------------|
-| **Data & scoring engine** | Ingestion, ML, CRS, report API | 6–7 engineers |
-| **Platform backend** | Check-in, forms, games, therapy, event gateway | 3 engineers |
-| **Frontend** | Mobile + web — all 12 Part1 screens + report dashboard | 4–5 engineers |
-| **Design + QA** | Figma, E2E tests | 3–4 people |
-| **Total** | **Complete Part1** | **~16–19 people** |
+| **Data & scoring engine** | Ingestion, ML, CRS, report API | 2 engineers 1 AI/ML Engineer |
+| **Platform backend** | Check-in, forms, games, therapy, event gateway | 2 engineers |
+| **Frontend** | Mobile + web — all Part1 screens + report dashboard | 2 engineers |
+| **Design + QA** | Figma, E2E tests | 2-3 people |
+| **Total** | **Complete Part1** | **~6-7 people** |
 
 | Deadline | Feasible? |
 |----------|-----------|
-| **6 months** | **Yes** — recommended plan |
-| **4 months everything** | Only with **~20 people** or reduced scope |
-| **4 months** | Engine + **Report UI only** (~12 people); remaining screens months 5–7 |
+| **2 months** | **Yes** — Engine Part 1 |
 
-Full screen catalog, workstreams, hours, and definition of done: **[Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md)**
 
 ---
 
-## 4-month program (all phases)
+## 2-month program (all phases)
 
-If leadership requires **full launch + all 70 data inputs in 4 months**:
+If leadership requires **full launch + all 70 data inputs in 2 months**:
 
 | Item | Requirement |
 |------|-------------|
-| **Team** | **8–9 engineers** (6 h/day, 5 days/week) |
+| **Team** | **4 engineers** (6 h/day, 5 days/week) |
 | **Week 10** | Public launch with core inputs (~26%) |
-| **Week 17** | **100% Part1 inputs** live |
+| **Week 9** | **100% Part1 inputs** live |
 | **Key condition** | Phase 5 expansion runs **in parallel from week 3** — not after launch |
-
-Full week-by-week plan, squad structure, and risks: **[Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md)**
 
 ---
 
@@ -48,142 +43,55 @@ Full week-by-week plan, squad structure, and risks: **[Development-Roadmap-4Mont
 
 **Working assumption:** Each engineer works **6 hours/day**, **5 days/week** (= **30 hours/week**).
 
-### Two delivery options at a glance
-
-| | **Standard plan** | **4-month plan (all phases)** |
-|--|-------------------|-------------------------------|
-| **Goal** | Launch in ~3 months; full data inputs over 6–8 months | Launch week 10 + **100% inputs by week 17** |
-| **Engineering headcount** | **4–5** | **8–9** |
-| **Total engineering hours** | ~1,000 (to launch) + ~800 (Phase 5) | ~4,000 (everything) |
-| **Risk** | Moderate | High — needs parallel teams from week 3 |
-| **Best when** | Budget-conscious; enrich after launch | Fixed 4-month deadline; leadership committed to staffing |
-
 ---
 
-### Option A — Standard plan (4–5 engineers)
-
-| Role | Count | What they do (plain language) | Busiest weeks |
-|------|-------|------------------------------|---------------|
-| **Engineering lead** | 1 | Owns end-to-end delivery, scoring logic, launch cutover | 1–13 |
-| **Backend engineer** | 1 | Builds scores, daily report API, personalized text | 1–13 |
-| **Data engineer** | 1 | Connects app/wearable/therapy data; prepares inputs for scoring | 1–8, then 50% on Phase 5 |
-| **ML engineer** | 1 | Trains prediction models; runs nightly probability updates | 5–13 |
-| **DevOps** (part-time) | 0.5 | Servers, batch schedules, monitoring, API reliability | 1–4 setup; 11–13 launch |
-
-**Phase 5 add-on (months 4–8):** +1 data engineer for forms, lifestyle, games, labs (or extend data engineer to full-time).
-
-```
-Month 1          Month 2          Month 3          Month 4+
-[Data][Backend]  [Data][ML]       [ML][Backend]    [+1 Data for
-[Lead][DevOps]   [Lead][Backend]  [Lead][DevOps]    enrichment]
-     Phase 1          Phase 2          Phase 3–4         Phase 5
-```
-
----
-
-### Option B — 4-month plan (8–9 engineers) — recommended for your deadline
+### Option 2-month plan (4 engineers)
 
 Two squads run **at the same time** from week 3:
 
-#### Core squad (5 people) — builds launch path
+#### Core squad (2 people) — builds launch path
 
 | Role | Count | Responsibility | Weeks active |
 |------|-------|----------------|--------------|
-| **Engineering lead** | 1 | Program integration, launch, scoring orchestration | 1–17 |
-| **Backend engineer** | 1 | Scores, report API, five questions, warnings | 1–17 |
-| **Data engineer (platform)** | 1 | Core data pipes, daily rollups, feature pipeline | 1–17 |
-| **ML engineer** | 1 | Outcome labels, 4 prediction models, final model update (week 16) | 5–17 (ramp-up weeks 1–4) |
-| **DevOps** | 0.5–1 | Infrastructure, batch jobs, production monitoring | 1–17 |
+| **Engineering lead** | 2 | Program integration, launch, scoring orchestration | 1–9 |
+| **Backend engineer** | 1 | Scores, report API, five questions, warnings | 1–9 |
+| **Data engineer (platform)** | 1 | Core data pipes, daily rollups, feature pipeline | 1–9 |
+| **ML engineer** | 1 | Outcome labels, 4 prediction models, final model update (week 5) | 5–9 |
+| **DevOps** | 0.5–1 | Infrastructure, batch jobs, production monitoring | 9 |
 
 #### Expansion squad (3–4 people) — connects remaining inputs in parallel
 
 | Role | Count | Responsibility | Weeks active |
 |------|-------|----------------|--------------|
-| **Data engineer (inputs A + C)** | 1 | Lifestyle check-ins, brain games, extra assessments | 3–14 |
-| **Data engineer (inputs B + D)** | 1 | Intake forms, lab results, therapist matching sheet | 5–14 |
-| **Backend / NLP engineer** | 1 | Journal sentiment, app behaviour signals | 5–12 |
-| **QA / data analyst** (recommended) | 1 | Score checks, regression tests, sign-off evidence | 4–17 |
-
-```
-Week:  1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17
-       |------- Core squad (5) --------------------------------------------|
-       |           |---- Expansion squad (3-4) ---------------------------|
-       |           |    Wave A (lifestyle, games)                          |
-       |               |    Wave B (forms)                                  |
-       |                   |    Wave C (assessments)                       |
-       |                       |    Wave D (labs, therapist)               |
-       |           |    Wave E (journal NLP) ------------------------------|
-       |                               | GA week 10                        |
-       |                                                   | 70/70 week 17 |
-```
+| **Data engineer (inputs A + C)** | 1 | Lifestyle check-ins, brain games, extra assessments, Intake forms, lab results, therapist matching sheet  | 3–8 |
+| **Backend / NLP engineer** | 2 | Journal sentiment, app behaviour signals | 3-8 |
+| **QA / data analyst** (recommended) | 1 | Score checks, regression tests, sign-off evidence | 8-9 |
 
 ---
 
-### Engineering hours by phase (4-month plan)
-
-| Phase | Calendar weeks | Est. hours | Primary owners |
-|-------|----------------|------------|----------------|
-| Prepare + Foundation | 1–4 | ~550 | Lead, data platform, backend |
-| Prediction models | 5–8 | ~500 | ML, data platform |
-| Validate + launch | 9–10 | ~280 | Backend, lead, ML |
-| Production hardening | 11–12 | ~200 | Backend, DevOps |
-| Full input expansion | 3–16 (parallel) | ~1,800 | Expansion squad (3–4) |
-| Final integration + model update | 13–17 | ~400 | All squads |
-| **Total** | **17** | **~3,800–4,200** | **8–9 engineers** |
-
-**Capacity check:** 8 engineers × 17 weeks × 30 h = **4,080 hours** — fits with **little slack**; 9th person (QA) strongly recommended.
-
----
-
-### Resource ramp by month (4-month plan)
-
-| Month | Engineers (FTE) | Focus |
-|-------|-------------------|--------|
-| **Month 1** | 6 (core 5 + 1 expansion starts week 3) | Core data + first scores; expansion schemas |
-| **Month 2** | 8 | Models + forms + lifestyle + games |
-| **Month 3** | 8–9 | Launch + labs + journal NLP |
-| **Month 4** | 8–9 | Integrate all 70 inputs; final QA + model refresh |
-
-*FTE = full-time equivalent at 30 h/week.*
-
----
-
-### Non-engineering resources (both plans)
+### Non-engineering resources
 
 These roles are **not** counted in engineering headcount but are **required** for gates:
 
 | Role | Typical commitment | Critical weeks |
 |------|-------------------|--------------|
-| **Clinical lead** | 4–8 h/week | 1, 8, 10, 17 (sign-offs) |
-| **Product manager** | 6–10 h/week | 1, 9–10, 17 (copy, launch) |
+| **Clinical lead** | 4–8 h/week | 1, 4, 8 (sign-offs) |
+| **Product manager** | 6–10 h/week | 1, 4, 8 (copy, launch) |
 | **Design** | 4–8 h/week | 9–11 (report UI consuming API) |
 | **Mobile / app team** | Separate squad | Must emit new event types per Phase 5 schedule |
 | **Operations / support** | Ramp at launch | 10+ (runbooks, “why did my score change?”) |
 
 ---
 
-### Budget summary for leadership
-
-| Plan | Engineers | Duration | Eng hours | Approx. person-months* |
-|------|-----------|----------|-----------|------------------------|
-| Standard (launch only) | 4–5 | 3 months | ~1,000 | **3–4** |
-| Standard (launch + Phase 5) | 5–6 | 8 months | ~1,800 | **7–8** |
-| **4-month all phases** | **8–9** | **4 months** | **~4,000** | **13–14** |
-
-\*Person-months = engineering hours ÷ 120 h (30 h/week × 4 weeks). Use your internal day rate × person-months for budget.
-
----
-
 ### Hiring / allocation checklist (4-month plan)
 
-- [ ] **8 engineers committed full program** (not 50% shared with other products)
-- [ ] **2 data engineers** minimum on expansion squad from week 3
-- [ ] **1 ML engineer** dedicated from week 1 (ramp) / week 5 (full labels)
+- [ ] **3 engineers committed full program** (not 50% shared with other products)
+- [ ] **1 ML+data engineer** minimum on expansion squad from week 3. Intern can be utilized.
+- [ ] **1 ML+data engineer** dedicated from week 1 (ramp) / week 5 (full labels). Intern can be unitilized.
 - [ ] **App team** aligned to ship lifestyle, forms, and game events by weeks 5–8
-- [ ] **Clinical gates** booked in advance (weeks 1, 8, 10, 17)
-- [ ] **Float buffer:** hold 1 engineer unallocated weeks 15–17 for slip recovery (ideal)
+- [ ] **Clinical gates** booked in advance (weeks 1, 4, 8)
+- [ ] **Float buffer:** hold 1 engineer unallocated weeks 5–8 for slip recovery (ideal)
 
-Technical detail: [Development-Roadmap-4Month-Accelerated.md §2](./Development-Roadmap-4Month-Accelerated.md#2-team-structure-required)
 
 ---
 
@@ -253,9 +161,9 @@ Clinical team signs off on risk thresholds before we go live.
 
 ## Timeline overview
 
-**Standard plan:** ~11 weeks to public launch, then 4–7 months to connect all data inputs.
+**Standard plan:** ~9 weeks to launch on staging.
 
-**4-month plan:** Launch week **10**, all inputs week **17** — requires **8–9 engineers** (see [Resource distribution](#resource-distribution)).
+
 
 ```mermaid
 gantt
