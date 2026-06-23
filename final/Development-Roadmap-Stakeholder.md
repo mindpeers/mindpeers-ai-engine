@@ -194,7 +194,7 @@ gantt
 
 ## Phase-by-phase — what changes for users and the business
 
-### Phase 0 — Prepare (1–2 weeks before build)
+### Phase 0 — Prepare (Week 1 before build)
 
 **What happens:** Specs, clinical thresholds, and data agreements are approved.
 
@@ -206,11 +206,10 @@ gantt
 
 - Clinical: approve risk cap and assessment change rules  
 - Product: approve score labels and band copy (Low / Moderate / High)  
-- Leadership: confirm launch scope (core report first; full data inputs later)
 
 ---
 
-### Phase 1 — Foundation (Weeks 1–4)
+### Phase 1 — Foundation (Weeks 1–2)
 
 **What happens:** We connect core data sources and produce the **first real scores** using rule-based logic (no AI predictions yet).
 
@@ -239,7 +238,7 @@ gantt
 
 ---
 
-### Phase 2 — Prediction models (Weeks 5–8)
+### Phase 2 — Prediction models (Weeks 3–4)
 
 **What happens:** We train AI models on historical data to predict four real outcomes:
 
@@ -261,7 +260,7 @@ gantt
 
 ---
 
-### Phase 3 — Validate before launch (Weeks 9–10)
+### Phase 3 — Validate before launch (Weeks 5–6)
 
 **What happens:** We combine prediction models into the **trajectory readiness score** and add **personalized report text** (the five questions).
 
@@ -277,11 +276,9 @@ gantt
 - Clinical: review risk and escalation messaging  
 - Design: review report layout with real sample data  
 
-**Business milestone (Week 10):** Go / no-go decision for public launch.
-
 ---
 
-### Phase 4 — Public launch (Week 11+)
+### Phase 4  (Week 7+)
 
 **What happens:** Trajectory readiness becomes the **main headline score** for users with enough history. The report API goes live in production with monitoring and rollback plans.
 
@@ -292,19 +289,15 @@ gantt
 - Same-day readiness still visible for context  
 - Personalized guidance and risk-aware messaging  
 
-**Launch does not wait** for every data source (games, forms, labs) — those enrich scores in Phase 5.
-
 **We need from you:**
 
-- Product & Clinical: final launch sign-off  
+- Product & Clinical: final sign-off  
 - Operations: support runbooks for “why did my score change?”  
 - Leadership: communicate two-score story clearly in release notes  
 
-**Business milestone:** Production launch with 99.9% API availability target.
-
 ---
 
-### Phase 5 — Richer data (parallel from Week 5, ~4–7 months)
+### Phase 5 — Richer data (parallel from Week 3)
 
 **What happens:** We connect remaining data sources from the Engine Part1 product spec so scores use **100% of planned inputs**.
 
@@ -322,52 +315,8 @@ gantt
 
 ---
 
-## Milestones executives can track
-
-### Standard plan
-
-| # | When | What success looks like | Data richness | Team size |
-|---|------|-------------------------|---------------|-----------|
-| **M1** | Week 4 | First real scores for test users | ~26% | 4–5 |
-| **M2** | Week 8 | Prediction models approved | ~26% | 4–5 |
-| **M3** | Week 10 | Personalized report ready for review | ~26% + narrative | 4–5 |
-| **M4** | Week 11–13 | **Public launch** | ~26% at launch | 4–5 |
-| **M5** | Month 4–5 | Half of all inputs connected | ~50% | 5–6 |
-| **M6** | Month 6–8 | All inputs connected | **100%** | 5–6 |
-
-### 4-month plan (all phases)
-
-| # | When | What success looks like | Data richness | Team size |
-|---|------|-------------------------|---------------|-----------|
-| **M1** | Week 3 | First scores (accelerated) | ~26% | 6 ramping to 8 |
-| **M2** | Week 7 | Models approved | ~26% | 8 |
-| **M3** | Week 9 | Shadow report ready | ~26% + narrative | 8–9 |
-| **M4** | **Week 10** | **Public launch** | ~55% | 8–9 |
-| **M5** | Week 12 | Most inputs connected | ~65% | 8–9 |
-| **M6** | **Week 17** | **All 70 inputs live** | **100%** | 8–9 |
-
----
-
-## What we are *not* building in the *engine-only* program
-
-The documents [Development-Roadmap.md](./Development-Roadmap.md) and [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) cover **Stack A** (data & scoring engine) only.
-
-For **complete Part1 including mobile/web UI and platform backend**, see **[Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md)**.
-
-| Out of scope in engine-only docs | Covered in full-stack doc |
-|----------------------------------|---------------------------|
-| Mobile / web UI implementation | 12 product screens + report dashboard |
-| App backend services (check-in, forms, games) | Platform backend workstream |
-| Real-time score on every tap | Daily batch (both plans) |
-| AI chat / open-ended coaching | Separate LLM program |
-| Full CogniArt cognitive testing | Future phase |
-
----
 
 ## Frequently asked questions
-
-**Q: How many engineers do we need?**  
-**A:** **4–5** for launch in ~3 months (standard). **8–9** to finish **everything** including all 70 data inputs in **4 months**. See [Resource distribution](#resource-distribution).
 
 **Q: Will Phase 1 mean Engine Part1 is “done”?**  
 **A:** No. Phase 1 means the **report works** with core inputs (assessments, check-ins, sleep, engagement, therapy). The full Part1 input list completes in Phase 5. Formulas are ready from day one; data connections grow over time.
@@ -427,39 +376,3 @@ For **complete Part1 including mobile/web UI and platform backend**, see **[Engi
 | **GA** | General availability — live for real users |
 
 ---
-
-## Related documents
-
-| Document | Who should read it |
-|----------|-------------------|
-| [Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md) | **Complete Part1** — engine + backend + frontend |
-| [Development-Roadmap-4Month-Accelerated.md](./Development-Roadmap-4Month-Accelerated.md) | Engineering leads — 4-month engine-only staffing |
-| [Development-Roadmap.md](./Development-Roadmap.md) | Engineering, Data, ML — technical schedule |
-| [MindPeers-Engine-Master-Production-Spec.md](./MindPeers-Engine-Master-Production-Spec.md) | Deep dive for technical leads |
-| [Engine Part1.docx](../Engine%20Part1.docx) | Product source — pillar inputs and weights |
-| [00-Master-Program-TRD.md](./00-Master-Program-TRD.md) | Formal requirements |
-
-### Export to PDF
-
-```bash
-pandoc final/Development-Roadmap-Stakeholder.md \
-  -o final/Development-Roadmap-Stakeholder.pdf \
-  --toc -V geometry:margin=1in \
-  --metadata title="MindPeers Engine — Stakeholder Roadmap"
-```
-
----
-
-## Revision history
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.1.1 | 2026-06-05 | Link to full-stack Part1 roadmap (backend + frontend + engine) |
-| 1.1.0 | 2026-06-05 | Resource distribution section (standard vs 4-month staffing, hours, ramp) |
-| 1.0.2 | 2026-06-05 | Link to 4-month accelerated all-phases plan |
-| 1.0.1 | 2026-06-05 | Fix Mermaid Gantt syntax for GitHub renderer |
-| 1.0.0 | 2026-06-05 | Initial non-technical stakeholder roadmap |
-
----
-
-*Questions? Contact the program lead. For technical implementation detail, see [Development-Roadmap.md](./Development-Roadmap.md).*
