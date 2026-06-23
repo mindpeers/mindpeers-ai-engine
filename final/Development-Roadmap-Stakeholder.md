@@ -1,7 +1,7 @@
 # MindPeers Cognitive Readiness Engine — Stakeholder Roadmap
 
 **Audience:** Product, Clinical, Leadership, Design, Operations  
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Date:** 2026-06-24  
 **Program kickoff:** 24 June 2026  
 **Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) · [Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md) (backend + frontend + engine — **complete Part1**)
@@ -175,13 +175,116 @@ Use this checklist at each gate. **Signatory:** Clinical lead (or delegate). **R
 | **G3 — ML labels** | 6 | ~4 Aug | Models may train |
 | **G4 — Narrative & shadow** | 7 | 5–14 Aug | Report copy approved |
 | **G5 — Launch** | 8 | from 15 Aug | Production go-live |
-| **G6 — Full inputs** | 8–10 | Jul–Aug | 70/70 validation (if in scope) |
+| **G6 — Full inputs** | 8–10 | Jul–Aug | 70/70 attribute MCID sign-off |
+
+---
+
+### Clinical sign-off — attributes, MCID & values
+
+**Signatory:** Clinical lead · **Label version:** `label_v2.0.0` · **Reference:** [CRS Unified v3 §4.3.3](../CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md#433-configuration-constants-clinical-sign-off-required), [Appendix B.1](../CRS-Calculation-and-Trends-Production-Spec-Unified-v3.md#appendix-b1--clinical-label-decision-tree-for-sign-off)
+
+Confirm each default **Value** or record an override in the G1 sign-off notes. Attributes marked **N/A** are scoring inputs only (no outcome-label MCID in v2.0.0).
+
+| Attribute | MCID | Value |
+|-----------|------|-------|
+| **A01** CORE-OM overall score | `CORE_OM_MCID_TOTAL` | **5** raw points (R1 improvement / L1 worsening) |
+| **A02** CORE-OM life functioning | `CORE_OM_MCID_SUBSCALE_NORM` | **0.10** normalized (R4 / functioning improvement ≥ +0.10) |
+| **A03** CORE-OM problems | `CORE_OM_MCID_SUBSCALE_NORM` | **0.10** normalized (R2 / L2 — problems ↓ = improvement) |
+| **A04** CORE-OM wellbeing | `CORE_OM_MCID_SUBSCALE_NORM` | **0.10** normalized (R3 — wellbeing ↑ = improvement) |
+| **A05** CORE-OM risk | `CORE_OM_RISK_RELAPSE_THRESHOLD` | **≥ 0.70** normalized (L3 relapse, recovery guard, risk cap trigger) |
+| **A05** CORE-OM risk *(display cap)* | `RISK_CAP_CEILING` | **40** (max displayed score when risk ≥ 0.70) |
+| **A05** CORE-OM risk *(delta)* | Risk increase (L4) | **≥ +0.15** normalized change |
+| **A06** CORE-OM 30-day delta | `CORE_OM_MCID_TOTAL` | **5** raw points (meaningful 30d total change) |
+| **A06** CORE-OM 30-day delta *(window)* | Assessment follow-up window | **T+21d to T+45d** (target T+30d) |
+| **A07** GAD-7 anxiety | `GAD7_MCID` | **4** raw points (secondary recovery confirmer / L5) |
+| **A08** PHQ-9 depression | N/A | Not in `label_v2.0.0` — pillar input only; confirm instrument |
+| **A09** Trauma (PTSD) score | N/A | Not in `label_v2.0.0` — pillar input only; confirm instrument |
+| **A10** ADHD (ASRS) | N/A | Not in `label_v2.0.0` — pillar input only; confirm instrument |
+| **A11** Sleep | Trend direction delta | **3** points (7-day arrow threshold) |
+| **A12** Fatigue | N/A | Scoring input only — no label MCID |
+| **A13** HRV | Trend direction delta | **3** points (7-day arrow threshold) |
+| **A14** Pulse / resting HR | N/A | Scoring input only — no label MCID |
+| **A15** Exercise | N/A | Scoring input only — no label MCID |
+| **A16** Nutrition | N/A | Scoring input only — no label MCID |
+| **A17** Hydration | N/A | Scoring input only — no label MCID |
+| **A18** Hunger | N/A | Scoring input only — no label MCID |
+| **A19** Sun exposure | N/A | Scoring input only — no label MCID |
+| **A20** Libido | N/A | Scoring input only — no label MCID |
+| **A21** Cortisol | N/A | Lab reference ranges — no label MCID; consent required |
+| **A22** Thyroid (TSH) | N/A | Lab reference ranges — no label MCID; consent required |
+| **A23** Blood sugar (glucose) | N/A | Lab reference ranges — no label MCID; consent required |
+| **A24** Vitamin D | N/A | Lab reference ranges — no label MCID; consent required |
+| **A25** HbA1c | N/A | Lab reference ranges — no label MCID; consent required |
+| **A26** Weight change (90d) | N/A | Scoring input only — no label MCID |
+| **A27** Mood check-in | Trend direction delta | **3** points; `mood_slope_7d` used in GAD-7 confirmer path |
+| **A28** Motivation check-in | Trend direction delta | **3** points (7-day arrow threshold) |
+| **A29** Confidence check-in | Trend direction delta | **3** points (7-day arrow threshold) |
+| **A30** Memory game | N/A | Scoring input only — no label MCID |
+| **A31** Connect Four | N/A | Scoring input only — no label MCID |
+| **A32** Whack-a-Mole | N/A | Scoring input only — no label MCID |
+| **A33** Journal tone / themes | N/A | NLP pattern input — no label MCID |
+| **A34** Blank slate journal | N/A | NLP pattern input — no label MCID |
+| **A35** Letter to self journal | N/A | NLP pattern input — no label MCID |
+| **A36** Gratitude journal | N/A | NLP pattern input — no label MCID |
+| **A37** App engagement | `ENGAGEMENT_LOSS_RELATIVE_DROP` | **50%** relative drop vs 30d baseline → `engagement_loss_label` |
+| **A38** Support-seeking frequency | N/A | Scoring input only — no label MCID |
+| **A39** Guides / content usage | N/A | Scoring input only — no label MCID |
+| **A40** Focus app behaviour | N/A | Scoring input only — no label MCID |
+| **A41** Task completion / drop-off | `ENGAGEMENT_LOSS_RELATIVE_DROP` | **50%** (via engagement proxy) |
+| **A42** Check-in drop-off | `ENGAGEMENT_LOSS_RELATIVE_DROP` | **50%** (via engagement proxy) |
+| **A43** Therapy attendance | N/A | Scoring input only — no label MCID |
+| **A44** Therapy intent (form) | N/A | Scoring input only — no label MCID |
+| **A45** Primary concern (form) | N/A | Scoring input only — no label MCID |
+| **A46** Free-text concern (form NLP) | N/A | Scoring input only — no label MCID |
+| **A47** Work-stress pattern (form) | N/A | Scoring input only — no label MCID |
+| **A48** Routine disruption (form) | N/A | Scoring input only — no label MCID |
+| **A49** Check-in burden (form) | N/A | Scoring input only — no label MCID |
+| **A50** Overthinking (form) | N/A | Scoring input only — no label MCID |
+| **A51** Decision fatigue (form) | N/A | Scoring input only — no label MCID |
+| **A52** Brain fog (form) | N/A | Scoring input only — no label MCID |
+| **A53** Work pressure (form) | N/A | Scoring input only — no label MCID |
+| **A54** Emotional triggers (form) | N/A | Scoring input only — no label MCID |
+| **A55** Relationship stress (form) | N/A | Scoring input only — no label MCID |
+| **A56** Self-talk themes (form / journal) | N/A | NLP pattern input — no label MCID |
+| **A57** Crisis / risk markers (form) | Escalation trigger | **flag = true** → mandatory human support (not score-only) |
+| **A58** Pattern improvement (form) | N/A | Scoring input only — no label MCID |
+| **A59** Coping behaviour (form) | N/A | Scoring input only — no label MCID |
+| **A60** Trigger reduction (form) | N/A | Scoring input only — no label MCID |
+| **A61** Burnout patterns (form) | N/A | Scoring input only — no label MCID |
+| **A62** Work functioning (form) | N/A | Scoring input only — no label MCID |
+| **A63** Routine difficulty (form) | N/A | Scoring input only — no label MCID |
+| **A64** Self-reported overwhelm (form) | N/A | Scoring input only — no label MCID |
+| **A65** Missed check-ins (forms rollup) | `DROPOUT_INACTIVE_DAYS` | **30** consecutive inactive days (dropout signal context) |
+| **A66** Sessions missed / cancelled | `DROPOUT_INACTIVE_DAYS` | **30** days no session + no app activity (dropout context) |
+| **A67** Days since last session | N/A | Scoring input only — no label MCID |
+| **A68** Therapist availability | N/A | Scoring input only — no label MCID |
+| **A69** Affordability / fee continuity | N/A | Scoring input only — no label MCID |
+| **A70** Mode / language match | N/A | Scoring input only — no label MCID |
+
+**Program-level constants (sign once at G1 — apply across attributes)**
+
+| Attribute scope | MCID | Value |
+|-----------------|------|-------|
+| All CORE-OM label rules | `ASSESSMENT_HORIZON_DAYS` | **30** days (target follow-up) |
+| All CORE-OM label rules | `ASSESSMENT_WINDOW_MIN_DAYS` / `MAX` | **21** / **45** days |
+| Dropout model | `DROPOUT_HORIZON_DAYS` | **60** days from snapshot T |
+| Dropout model | `DROPOUT_INACTIVE_DAYS` | **30** consecutive days |
+| Engagement loss model | `ENGAGEMENT_LOSS_RELATIVE_DROP` | **0.50** (50% relative drop) |
+| All display scores | Direction rule | Lower CORE-OM total = improvement |
+
+**G1 MCID sign-off**
+
+| Field | Value |
+|-------|-------|
+| Clinical lead | _________________________ |
+| Date | _________________________ |
+| Overrides (attribute → new value) | _________________________ |
 
 ---
 
 ### G1 — Pre-build (Week 1: 24–30 June 2026)
 
-**Thresholds & rules**
+**Thresholds & rules** — full per-attribute table: [Clinical sign-off — attributes, MCID & values](#clinical-sign-off--attributes-mcid--values)
 
 - [ ] **CORE-OM risk cap** — `core_om_risk ≥ 0.70` caps all display scores at **40** (confirm or change threshold)
 - [ ] **Risk relapse threshold** — normalized risk **≥ 0.70** at follow-up counts as relapse signal (L3)
