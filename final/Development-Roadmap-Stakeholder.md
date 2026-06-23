@@ -1,9 +1,10 @@
 # MindPeers Cognitive Readiness Engine — Stakeholder Roadmap
 
 **Audience:** Product, Clinical, Leadership, Design, Operations  
-**Version:** 1.2.0  
-**Date:** 2026-06-05  
-**Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) · [Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md)** (backend + frontend + engine — **complete Part1**)
+**Version:** 1.2.1  
+**Date:** 2026-06-24  
+**Program kickoff:** 24 June 2026  
+**Technical companion:** [Development-Roadmap.md](./Development-Roadmap.md) · [Engine-Part1-Full-Stack-Development-Roadmap.md](./Engine-Part1-Full-Stack-Development-Roadmap.md) (backend + frontend + engine — **complete Part1**)
 
 ---
 
@@ -28,14 +29,16 @@ If you need **everything** — all screens, app APIs, mobile/web UI, and the sco
 
 ## 2-month program (all phases)
 
-If leadership requires **full launch + all 70 data inputs in 2 months**:
+**Kickoff:** 24 June 2026
+
+If leadership requires **full launch + all 70 data inputs in ~2.5 months**:
 
 | Item | Requirement |
 |------|-------------|
 | **Team** | **4 engineers** (6 h/day, 5 days/week) |
-| **Week 10** | Public launch with core inputs (~26%) |
-| **Week 9** | **100% Part1 inputs** live |
-| **Key condition** | Phase 5 expansion runs **in parallel from week 3** — not after launch |
+| **Week 8 (~15 Aug)** | Public launch with core inputs (~26%) |
+| **Week 8–10** | **100% Part1 inputs** live (parallel enrichment) |
+| **Key condition** | Phase 5 expansion runs **in parallel from week 2** (1 July) — not after launch |
 
 ---
 
@@ -161,9 +164,17 @@ Clinical team signs off on risk thresholds before we go live.
 
 ## Timeline overview
 
-**Standard plan:** ~9 weeks to launch on staging.
+**Program kickoff:** **24 June 2026** (Week 1)  
+**Target:** ~2.5 months to public launch (~early September 2026)
 
-
+| Week | Dates (2026) | Phase |
+|------|----------------|-------|
+| 1 | 24 Jun – 30 Jun | Prepare — approvals & clinical sign-off |
+| 2–4 | 1 Jul – 21 Jul | Build core report — first scores |
+| 5–6 | 22 Jul – 4 Aug | Prediction models |
+| 7 | 5 Aug – 14 Aug | Validate — dual scores + narrative |
+| 8+ | 15 Aug onward | Public release |
+| 2–8 (parallel) | 1 Jul – 14 Aug | Enrich data — games, forms, labs |
 
 ```mermaid
 gantt
@@ -172,29 +183,29 @@ gantt
     axisFormat %b %d
 
     section Prepare
-    Approvals and clinical sign-off      :prep, 2026-06-09, 7d
+    Approvals and clinical sign-off      :prep, 2026-06-24, 7d
 
     section Build core report
-    First working scores internal        :core, 2026-06-16, 21d
+    First working scores internal        :core, 2026-07-01, 21d
 
     section Add intelligence
-    Prediction models trained            :ml, 2026-07-07, 14d
+    Prediction models trained            :ml, 2026-07-22, 14d
 
     section Validate
-    Dual scores and personalized text    :val, 2026-07-21, 10d
+    Dual scores and personalized text    :val, 2026-08-05, 10d
 
     section Launch
-    Public release                       :launch, 2026-07-31, 14d
+    Public release                       :launch, 2026-08-15, 14d
 
     section Enrich data parallel
-    More inputs games forms labs         :expand, 2026-06-23, 45d
+    More inputs games forms labs         :expand, 2026-07-01, 45d
 ```
 
 ---
 
 ## Phase-by-phase — what changes for users and the business
 
-### Phase 0 — Prepare (Week 1 before build)
+### Phase 0 — Prepare (Week 1 — starts 24 June 2026)
 
 **What happens:** Specs, clinical thresholds, and data agreements are approved.
 
@@ -209,7 +220,7 @@ gantt
 
 ---
 
-### Phase 1 — Foundation (Weeks 1–2)
+### Phase 1 — Foundation (Weeks 2–4 — 1 July to 21 July 2026)
 
 **What happens:** We connect core data sources and produce the **first real scores** using rule-based logic (no AI predictions yet).
 
@@ -234,11 +245,11 @@ gantt
 
 > **Important:** Phase 1 delivers the **full scoring framework** but only **about one-quarter of all planned data inputs**. Missing inputs don’t break the report — weights adjust to use what’s available. This is intentional so we can ship a credible report early.
 
-**Business milestone (Week 4):** First scores visible for test users in staging.
+**Business milestone (Week 4 — ~21 July 2026):** First scores visible for test users in staging.
 
 ---
 
-### Phase 2 — Prediction models (Weeks 3–4)
+### Phase 2 — Prediction models (Weeks 5–6 — 22 July to 4 August 2026)
 
 **What happens:** We train AI models on historical data to predict four real outcomes:
 
@@ -256,11 +267,11 @@ gantt
 - Clinical: review how “recovery” and “relapse” are defined from assessments  
 - Leadership: patience — model quality depends on having enough historical follow-up data  
 
-**Business milestone (Week 8):** Models pass quality checks and are approved for shadow testing.
+**Business milestone (Week 6 — ~4 August 2026):** Models pass quality checks and are approved for shadow testing.
 
 ---
 
-### Phase 3 — Validate before launch (Weeks 5–6)
+### Phase 3 — Validate before launch (Week 7 — ~5–14 August 2026)
 
 **What happens:** We combine prediction models into the **trajectory readiness score** and add **personalized report text** (the five questions).
 
@@ -276,9 +287,11 @@ gantt
 - Clinical: review risk and escalation messaging  
 - Design: review report layout with real sample data  
 
+**Business milestone (Week 7 — ~14 August 2026):** Go / no-go decision for public launch.
+
 ---
 
-### Phase 4  (Week 7+)
+### Phase 4 — Public launch (Week 8+ — from ~15 August 2026)
 
 **What happens:** Trajectory readiness becomes the **main headline score** for users with enough history. The report API goes live in production with monitoring and rollback plans.
 
@@ -297,7 +310,7 @@ gantt
 
 ---
 
-### Phase 5 — Richer data (parallel from Week 3)
+### Phase 5 — Richer data (parallel from Week 2 — 1 July 2026)
 
 **What happens:** We connect remaining data sources from the Engine Part1 product spec so scores use **100% of planned inputs**.
 
