@@ -16,7 +16,7 @@ If you need **everything** — all screens, app APIs, mobile/web UI, and the sco
 |-------|------|--------------------------|
 | **Data & scoring engine** | Ingestion, ML, CRS, report API | 2 engineers 1 AI/ML Engineer |
 | **Platform backend** | Check-in, forms, games, therapy, event gateway | 2 engineers |
-| **Frontend** | Mobile + web — all Part1 screens + report dashboard | 2 engineers |
+| **Frontend** | Mobile + web — all Part1 screens + report dashboard | 1 engineer |
 | **Design + QA** | Figma, E2E tests | 2-3 people |
 | **Total** | **Complete Part1** | **~6-7 people** |
 
