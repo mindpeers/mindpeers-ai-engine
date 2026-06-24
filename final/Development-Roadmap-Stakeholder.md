@@ -22,12 +22,12 @@ If you need **everything** — all screens, app APIs, mobile/web UI, and the sco
 
 | Deadline | Feasible? |
 |----------|-----------|
-| **2 months** | **Yes** — Engine Part 1 |
+| **2.5 months** | **Yes** — Engine Part 1 |
 
 
 ---
 
-## 2-month program (all phases)
+## 2.5-month program (all phases)
 
 **Kickoff:** 24 June 2026
 
@@ -48,7 +48,7 @@ If leadership requires **full launch + all 70 data inputs in ~2.5 months**:
 
 ---
 
-### 2-months plan (4 engineers)
+### 2.5-months plan (4 engineers)
 
 Two squads run **at the same time** from week 3:
 
